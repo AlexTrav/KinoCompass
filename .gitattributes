@@ -1,0 +1,8 @@
+# одинаковые переводы строк на Windows и в Linux-контейнерах (Makefile, CSV, скрипты)
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.onnx binary
+*.npy binary
+*.npz binary
+*.parquet binary

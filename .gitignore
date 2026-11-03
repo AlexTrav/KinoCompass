@@ -1,0 +1,29 @@
+# секреты (ключ TMDb и т.п.) – только в переменных окружения
+.env
+.env.*
+!.env.example
+
+# сырые данные MovieLens и рабочие файлы – скачиваются и собираются командами make в data/
+data/raw/
+data/work/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# frontend
+node_modules/
+dist/
+*.local
+
+# логи
+*.log
+
+# IDE и ОС
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
