@@ -14,8 +14,8 @@
 ## Что уже сделано
 
 - данные: MovieLens 32M скачивается в память при каждом запуске (на диске не хранится), каталог из
-  23 349 фильмов (99 % оценок) с названиями на русском, казахском и английском из Wikidata и постерами
-  TMDb, проверка данных – [data/](data/README.md);
+  23 349 фильмов (99 % оценок) с названиями на русском, казахском и английском из Wikidata, постерами и
+  описаниями сюжета TMDb, проверка данных – [data/](data/README.md);
 - исследование данных: длинный хвост популярности, поведение новичков (59 % людей не возвращаются после
   первых суток – главный сценарий холодный старт), связь оценки с популярностью и годом выпуска, жанры и
   корреляции вкусов, теги, годовые окна для разбиения по времени, 15 рисунков – [research/](research/README.md);
@@ -42,7 +42,7 @@ make factorization # матричная факторизация (ALS, BPR, SVD)
 make test      # автотесты
 ```
 
-Для постеров нужен ключ TMDb: `TMDB_TOKEN=<Ключ доступа к API>` в файле `.env` в корне проекта
+Для постеров и описаний нужен ключ TMDb: `TMDB_TOKEN=<Ключ доступа к API>` в файле `.env` в корне проекта
 (в git не попадает).
 
 ## Структура
@@ -59,5 +59,5 @@ KinoCompass/
 
 MovieLens 32M – GroupLens Research ([условия](data/catalog/ml-32m-README.txt): некоммерческое
 использование), F. M. Harper, J. A. Konstan. The MovieLens Datasets: History and Context. ACM TiiS, 2015.
-Названия фильмов – [Wikidata](https://www.wikidata.org/) (CC0). Постеры – [TMDb](https://www.themoviedb.org/):
-this product uses the TMDB API but is not endorsed or certified by TMDB.
+Названия фильмов – [Wikidata](https://www.wikidata.org/) (CC0). Постеры и описания сюжета –
+[TMDb](https://www.themoviedb.org/): this product uses the TMDB API but is not endorsed or certified by TMDB.

@@ -7,7 +7,7 @@ import pytest
 import requests
 
 from collect import movielens, net, tmdb, wikidata
-from collect.config import POSTERS_COLUMNS, TITLES_COLUMNS
+from collect.config import OVERVIEWS_COLUMNS, POSTERS_COLUMNS, TITLES_COLUMNS
 from collect.store import load, save
 
 
@@ -218,3 +218,29 @@ def test_update_posters_stops_on_bad_token(tmp_path, monkeypatch):
 
     with pytest.raises(SystemExit, match="401"):
         tmdb.update_posters(catalog, tmp_path / "p.csv", get=fake_get)
+
+
+def test_parse_overviews_takes_translations():
+    data = {"overview": f"  A hacker  learns\nthe truth {tmdb.EM_DASH} and fights. ",
+            "translations": {"translations": [
+                {"iso_639_1": "ru", "iso_3166_1": "RU", "data": {"overview": "Хакер узнаёт правду."}},
+                {"iso_639_1": "ru", "iso_3166_1": "UA", "data": {"overview": "Другой перевод."}},
+                {"iso_639_1": "kk", "iso_3166_1": "KZ", "data": {"overview": ""}},
+                {"iso_639_1": "de", "iso_3166_1": "DE", "data": {"overview": "Ein Hacker."}}]}}
+    # пробелы схлопнуты, длинное тире заменено, первый русский перевод, пустой казахский – как «нет описания»
+    assert tmdb.parse_overviews(data) == ("A hacker learns the truth – and fights.", "Хакер узнаёт правду.", "")
+    assert tmdb.parse_overviews({}) == ("", "", "")
+
+
+def test_update_overviews_writes_stable_gzip(tmp_path, monkeypatch):
+    monkeypatch.setenv("TMDB_TOKEN", "test")
+    catalog = pd.DataFrame({"movie_id": [1, 2, 3], "tmdb_id": pd.array([603, 807, None], dtype="Int64")})
+    texts = {603: ("Neo.", "Нео.", ""), 807: ("", "", "")}
+    path = tmp_path / "o.csv.gz"
+    found, errors = tmdb.update_overviews(catalog, path, get=lambda tmdb_id, headers: texts[tmdb_id])
+    assert errors == 0
+    assert found[OVERVIEWS_COLUMNS].values.tolist() == [[1, "603", "Neo.", "Нео.", ""], [2, "807", "", "", ""]]
+    first = path.read_bytes()
+    assert first[:2] == b"\x1f\x8b"  # сжато
+    tmdb.update_overviews(catalog, path, refresh=True, get=lambda tmdb_id, headers: texts[tmdb_id])
+    assert path.read_bytes() == first  # те же данные – тот же файл: git не видит лишних изменений

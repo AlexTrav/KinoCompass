@@ -9,6 +9,7 @@ from .store import load
 CATALOG_PATH = CATALOG_DIR / "movies.csv"
 TITLES_PATH = CATALOG_DIR / "titles.csv"
 POSTERS_PATH = CATALOG_DIR / "posters.csv"
+OVERVIEWS_PATH = CATALOG_DIR / "overviews.csv.gz"  # описания сюжета en/ru/kk – сжаты: русский текст тяжёлый
 README_COPY = CATALOG_DIR / "ml-32m-README.txt"  # условия лицензии MovieLens едут вместе с каталогом
 
 
@@ -54,11 +55,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Данные MovieLens 32M и каталог фильмов KinoCompass")
     parser.add_argument(
         "command",
-        choices=["catalog", "titles", "posters", "check"],
+        choices=["catalog", "titles", "posters", "overviews", "check"],
         help="catalog – скачать набор в память, собрать каталог фильмов и проверить; titles – названия ru/kk/en "
-             "из Wikidata; posters – постеры TMDb (нужен TMDB_TOKEN); check – скачать набор в память и проверить всё",
+             "из Wikidata; posters – постеры TMDb, overviews – описания сюжета TMDb en/ru/kk (оба – нужен TMDB_TOKEN); "
+             "check – скачать набор в память и проверить всё",
     )
-    parser.add_argument("--refresh", action="store_true", help="titles и posters: запросить все фильмы заново")
+    parser.add_argument("--refresh", action="store_true",
+                        help="titles, posters, overviews: запросить все фильмы заново")
     args = parser.parse_args()
 
     problems: list[str] = []
@@ -76,6 +79,14 @@ def main() -> None:
         print(f"  записано постеров: {len(posters)}")
         if errors:
             problems.append(f"постеры: {errors} фильмов не получены из-за ошибок – повтори make posters")
+    elif args.command == "overviews":
+        from .tmdb import update_overviews
+
+        found, errors = update_overviews(read_catalog(), OVERVIEWS_PATH, refresh=args.refresh)
+        filled = {lang: int((found[f"overview_{lang}"] != "").sum()) for lang in ("en", "ru", "kk")}
+        print(f"  записано фильмов: {len(found)}, с описанием: {filled}")
+        if errors:
+            problems.append(f"описания: {errors} фильмов не получены из-за ошибок – повтори make overviews")
     else:
         from .movielens import fetch
 

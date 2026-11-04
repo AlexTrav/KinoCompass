@@ -6,3 +6,4 @@
 *.npy binary
 *.npz binary
 *.parquet binary
+*.gz binary

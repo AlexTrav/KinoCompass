@@ -37,6 +37,9 @@ CATALOG_COLUMNS = [
 ]
 TITLES_COLUMNS = ["movie_id", "wikidata", "title_ru", "title_kk", "title_en"]
 POSTERS_COLUMNS = ["movie_id", "tmdb_id", "poster_path"]
+OVERVIEWS_COLUMNS = ["movie_id", "tmdb_id", "overview_en", "overview_ru", "overview_kk"]
+# языки описаний сюжета: английское – основное поле ответа, русское и казахское – из переводов TMDb
+OVERVIEW_LANGS = ("ru", "kk")
 
 # Wikidata: названия на русском, казахском и английском по IMDb id (свойство P345), лицензия CC0
 WIKIDATA_URL = "https://query.wikidata.org/sparql"
@@ -45,7 +48,7 @@ WIKIDATA_PAUSE_SEC = 1.0  # пауза между запросами – веж�
 # язык на сайте -> языковые метки Wikidata по приоритету (у казахских бывает и метка kk-cyrl)
 LABEL_LANGS = {"ru": ("ru",), "kk": ("kk", "kk-cyrl"), "en": ("en",)}
 
-# TMDb: путь к постеру по tmdbId; ключ – переменная окружения TMDB_TOKEN («Ключ доступа к API», v4)
+# TMDb: путь к постеру и описания сюжета по tmdbId; ключ – переменная окружения TMDB_TOKEN («Ключ доступа к API», v4)
 TMDB_URL = "https://api.themoviedb.org/3/movie/{}"
 TMDB_WORKERS = 8  # параллельных запросов: TMDb разрешает около 40–50 в секунду
 

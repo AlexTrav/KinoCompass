@@ -1,4 +1,4 @@
-.PHONY: image catalog titles posters check data test clean
+.PHONY: image catalog titles posters overviews check data test clean
 
 IMAGE := kinocompass-data
 
@@ -26,12 +26,16 @@ titles: image
 posters: image
 	docker run --rm --env-file "$(CURDIR)/../.env" -v "$(CURDIR)/catalog:/data/catalog" $(IMAGE) posters
 
+# описания сюжета TMDb на en, ru, kk -> catalog/overviews.csv.gz (одним запросом на фильм, тем же ключом)
+overviews: image
+	docker run --rm --env-file "$(CURDIR)/../.env" -v "$(CURDIR)/catalog:/data/catalog" $(IMAGE) overviews
+
 # скачать набор в память и проверить всё: сверка с README набора, шкала, даты, дубли, каталог
 check: image
 	$(RUN) check
 
 # всё по порядку с нуля (catalog уже проверяет набор, поэтому отдельный check не нужен)
-data: catalog titles posters
+data: catalog titles posters overviews
 
 # pytest: разбор, каталог, проверки, Wikidata и TMDb – на маленьких данных, без сети
 test: image
