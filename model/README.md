@@ -9,7 +9,7 @@ make baselines              # базовые модели на валидаци�
 make knn                    # соседи: item-kNN (8 настроек) и user-kNN (3) -> reports/knn/validation.json
 make factorization          # ALS (8 настроек), BPR (4), SVD (4) -> reports/factorization/validation.json
 make figures                # рисунки по сохранённым отчётам -> figures/
-make test                   # pytest протокола, метрик и моделей (18 тестов)
+make test                   # pytest протокола, метрик и моделей (19 тестов)
 ```
 
 Каждый прогон, кроме сводного JSON, сохраняет NDCG@10 каждого человека (`<PERIOD>_users.csv.gz`) – по ним
@@ -22,6 +22,8 @@ make test                   # pytest протокола, метрик и мод�
 | `baselines.py` | общий интерфейс моделей и базовые модели |
 | `knn.py` | соседи: item-kNN (сходство из implicit) и user-kNN, матрица «люди × фильмы» |
 | `factorization.py` | матричная факторизация: ALS и BPR из implicit, SVD со смещениями (своё, ALS по явным оценкам) |
+| `ease.py` | EASE – линейная модель «фильм × фильм» в одну формулу; на всех кандидатах учится в Colab на GPU |
+| `notebooks/ease.ipynb` | ноутбук Colab: клонирует репозиторий и запускает `python evaluate.py ease`, итог – архив отчёта |
 | `evaluate.py` | прогон моделей по всем сценариям с отчётом; модели обучаются и проверяются по одной |
 | `figures.py` | рисунки (нумерация продолжает исследование: с 16) |
 

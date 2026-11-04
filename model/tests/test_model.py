@@ -249,3 +249,25 @@ def test_run_fits_models_one_by_one(monkeypatch, taste):
     assert order == [("fit", "a"), ("release", "a"), ("fit", "b"), ("release", "b")]
     assert set(report["score"]) == {"a", "b"} and report["scenarios"]["cold5"]["people"] == 1
     assert "cold10" not in report["scenarios"]  # после 10 оценок угадывать нечего – сценарий пропущен
+
+
+# --- EASE -------------------------------------------------------------------------------------------------------
+
+import ease  # noqa: E402
+
+
+def test_ease_closed_form(taste):
+    knn._cache.clear()
+    ease._gram.clear()
+    pool = np.arange(1, 8)
+    model = ease.EASE(lam=1.0).fit(taste, pool)
+    assert model.b.shape == (7, 7) and np.allclose(np.diag(model.b), 0)
+    assert set(model.recommend(inputs(4, 7), 2)) == {5, 6}  # своя компания
+    # формула: B = I − P·diag(1/diag P), P = (XᵀX + λI)⁻¹
+    x = knn.interactions(taste, pool)[0].toarray().astype(np.float64)
+    p = np.linalg.inv(x.T @ x + np.eye(7))
+    expected = np.eye(7) - p / np.diag(p)
+    np.fill_diagonal(expected, 0)
+    assert np.allclose(model.b, expected, atol=1e-5)
+    model.release()
+    assert not hasattr(model, "b")

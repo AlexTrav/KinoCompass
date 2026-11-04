@@ -172,8 +172,13 @@ def main() -> None:
         svd = f.svd_grid()
         run("factorization", [baselines.RecentPopularity(), *f.als_grid(), *f.bpr_grid(), *svd],
             [baselines.Biases(), *svd])
+    elif command == "ease":
+        import ease
+
+        # EASE на всех кандидатах – в Colab на GPU (notebooks/ease.ipynb); без GPU – только на маленьких данных
+        run("ease", [baselines.RecentPopularity(), *ease.ease_grid()], [])
     else:
-        sys.exit("использование: python evaluate.py baselines|knn|factorization")
+        sys.exit("использование: python evaluate.py baselines|knn|factorization|ease")
 
 
 if __name__ == "__main__":
