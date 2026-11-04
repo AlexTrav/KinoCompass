@@ -41,11 +41,12 @@ def context(history: pd.DataFrame, movies: pd.DataFrame, pool: np.ndarray) -> Co
     return Context(pool, share, bits)
 
 
-def rank_model(model: baselines.Recommender, cases: list[Case], ctx: Context) -> tuple[pd.DataFrame, float]:
-    """Метрики каждого человека и покрытие каталога первыми 10 советами."""
+def rank_model(model: baselines.Recommender, cases: list[Case], ctx: Context) -> tuple[pd.DataFrame, float, float]:
+    """Метрики каждого человека, покрытие каталога первыми 10 советами и время совета одному человеку, мс."""
     rows, lists = [], []
+    tic = time.perf_counter()
     for case in cases:
-        recommended = model.recommend(case.inputs, max(KS))
+        recommended = model.recommend(case.inputs, max(KS), case.user)
         row = {}
         for k in KS:
             row |= list_metrics(recommended, case.targets, k)
@@ -53,12 +54,14 @@ def rank_model(model: baselines.Recommender, cases: list[Case], ctx: Context) ->
         row["diversity@10"] = diversity(recommended[:10], ctx.bits)
         rows.append(row)
         lists.append(recommended[:10])
-    return pd.DataFrame(rows, index=[c.user for c in cases]), coverage(lists, len(ctx.pool))
+    ms = (time.perf_counter() - tic) * 1000 / max(len(cases), 1)  # вместе с метриками – верхняя оценка
+    return pd.DataFrame(rows, index=[c.user for c in cases]), coverage(lists, len(ctx.pool)), ms
 
 
-def summarize(frame: pd.DataFrame, cover: float) -> dict:
+def summarize(frame: pd.DataFrame, cover: float, ms: float) -> dict:
     out = {name: round(float(value), 5) for name, value in frame.mean().items()}
     out["coverage@10"] = round(cover, 5)
+    out["ms_per_user"] = round(ms, 2)
     out[f"{MAIN}_ci95"] = [round(v, 5) for v in bootstrap_ci(frame[MAIN].to_numpy())]
     return out
 
@@ -88,9 +91,12 @@ def period_from_env() -> str:
 def run(name: str, ranking: list[baselines.Recommender], rating: list[baselines.GlobalMean]) -> dict:
     period = period_from_env()
     started = time.time()
+    stages = {}  # секунды по этапам: где уходит время прогона
     history, future, movies = load(period)
+    stages["load"] = round(time.time() - started, 1)
     pool = candidates(history)
     cases = scenarios(history, future, pool)
+    stages["scenarios"] = round(time.time() - started - sum(stages.values()), 1)
     ctx = context(history, movies, pool)
     liked = future[future["rating"] >= POSITIVE]
     report = {
@@ -108,19 +114,31 @@ def run(name: str, ranking: list[baselines.Recommender], rating: list[baselines.
         report["fit_seconds"][model.name] = round(time.time() - tic, 2)
     for model in rating:
         model.fit(history)
+    stages["fit"] = round(time.time() - started - sum(stages.values()), 1)
+    users = []
     for scenario, people in cases.items():
         per_user, report["ranking"][scenario] = {}, {}
         for model in ranking:
-            frame, cover = rank_model(model, people, ctx)
+            frame, cover, ms = rank_model(model, people, ctx)
             per_user[model.name] = frame[MAIN]
-            report["ranking"][scenario][model.name] = summarize(frame, cover)
+            report["ranking"][scenario][model.name] = summarize(frame, cover, ms)
             print(scenario, model.name, MAIN, report["ranking"][scenario][model.name][MAIN], flush=True)
         report["significance"][scenario] = significance(per_user)
         report["rating"][scenario] = {model.name: rate_model(model, people) for model in rating}
+        users.append(pd.DataFrame(per_user).rename_axis("user").reset_index().assign(scenario=scenario))
+    # итоговый балл – среднее NDCG@10 по трём сценариям (критерий выбора настроек и модели по умолчанию)
+    report["score"] = {model.name: round(float(np.mean([report["ranking"][s][model.name][MAIN] for s in cases])), 5)
+                       for model in ranking}
+    report["best"] = max(report["score"], key=report["score"].get) if ranking else None
+    stages["evaluate"] = round(time.time() - started - sum(stages.values()), 1)
+    report["stage_seconds"] = stages
     report["seconds"] = round(time.time() - started, 1)
+    print("этапы, с:", stages, flush=True)
     out = REPORTS / name / f"{period}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # NDCG@10 каждого человека – для парных тестов между прогонами (в том числе из Colab)
+    pd.concat(users, ignore_index=True).round(5).to_csv(out.with_name(f"{period}_users.csv.gz"), index=False)
     print(f"сохранено {out.relative_to(REPORTS.parent)} за {report['seconds']} с")
     return report
 
@@ -129,8 +147,13 @@ def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else ""
     if command == "baselines":
         run("baselines", baselines.ranking_models(), baselines.rating_models())
+    elif command == "knn":
+        import knn
+
+        # планка – лучшая базовая модель, в том же прогоне: те же люди, парный тест напрямую
+        run("knn", [baselines.RecentPopularity(), *knn.item_grid(), *knn.user_grid()], [])
     else:
-        sys.exit("использование: python evaluate.py baselines")
+        sys.exit("использование: python evaluate.py baselines|knn")
 
 
 if __name__ == "__main__":

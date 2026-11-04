@@ -20,12 +20,12 @@ class Recommender:
         self.position = pd.Series(np.arange(len(pool)), index=pool)  # id фильма -> номер кандидата
         return self
 
-    def scores(self, inputs: pd.DataFrame) -> np.ndarray:
+    def scores(self, inputs: pd.DataFrame, user: int | None = None) -> np.ndarray:
         raise NotImplementedError
 
-    def recommend(self, inputs: pd.DataFrame, k: int) -> np.ndarray:
+    def recommend(self, inputs: pd.DataFrame, k: int, user: int | None = None) -> np.ndarray:
         """k лучших кандидатов, кроме уже оценённых человеком; при равных баллах – по порядку id."""
-        scores = np.asarray(self.scores(inputs), dtype=np.float64).copy()
+        scores = np.asarray(self.scores(inputs, user), dtype=np.float64).copy()
         seen = self.position.reindex(inputs["movie_id"]).dropna().to_numpy(np.int64)
         scores[seen] = -np.inf
         top = np.argpartition(-scores, k)[:k] if k < len(scores) else np.arange(len(scores))
@@ -36,7 +36,7 @@ class Recommender:
 class Static(Recommender):
     """Один и тот же порядок для всех – отличаются лишь исключённые уже оценённые фильмы."""
 
-    def scores(self, inputs: pd.DataFrame) -> np.ndarray:
+    def scores(self, inputs: pd.DataFrame, user: int | None = None) -> np.ndarray:
         return self.static
 
     def counts(self, history: pd.DataFrame) -> np.ndarray:
@@ -50,7 +50,7 @@ class RandomModel(Recommender):
     def __init__(self, seed: int = 0):
         self.rng = np.random.default_rng(seed)
 
-    def scores(self, inputs: pd.DataFrame) -> np.ndarray:
+    def scores(self, inputs: pd.DataFrame, user: int | None = None) -> np.ndarray:
         return self.rng.random(len(self.pool))
 
 

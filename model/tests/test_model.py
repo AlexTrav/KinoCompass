@@ -140,3 +140,49 @@ def test_biases_fold_in_user(history):
     assert model.predict(strict, np.array([1]))[0] < mu + model.item_bias[1]  # строгий человек – ниже
     assert baselines.GlobalMean().fit(history).predict(strict, np.array([1, 2])).tolist() == [mu, mu]
     assert model.predict(inputs(), np.array([99]))[0] == pytest.approx(mu)  # незнакомый фильм – общее среднее
+
+
+# --- соседи -----------------------------------------------------------------------------------------------------
+
+import knn  # noqa: E402
+
+
+@pytest.fixture
+def taste():
+    """Две компании: люди 0–9 смотрят фильмы 1–3, люди 10–19 – фильмы 4–6; фильм 7 смотрят все."""
+    rows = [(u, m, 5.0, START - DAY) for u in range(10) for m in (1, 2, 3, 7)]
+    rows += [(u, m, 5.0, START - DAY) for u in range(10, 20) for m in (4, 5, 6, 7)]
+    return frame(rows)
+
+
+def test_interactions_matrix(taste):
+    knn._cache.clear()
+    pool = np.arange(1, 8)
+    matrix, users = knn.interactions(taste, pool)
+    assert matrix.shape == (20, 7) and matrix.sum() == 80 and users.tolist() == list(range(20))
+    assert knn.interactions(taste, pool)[0] is matrix  # одна матрица на всю сетку прогона
+
+
+def test_item_knn_recommends_same_company_and_explains(taste):
+    knn._cache.clear()
+    model = knn.ItemKNN("cosine", k=10).fit(taste, np.arange(1, 8))
+    rec = model.recommend(inputs(1), 3)
+    assert set(rec[:2]) == {2, 3} and 7 in rec  # сначала фильмы своей компании
+    assert model.because(inputs(1, 4), 2) == [1]  # фильм 2 советуется из-за фильма 1, а не 4
+
+
+def test_centered_weights_push_disliked_down():
+    position = pd.Series(np.arange(3), index=[10, 20, 30])
+    rated = pd.DataFrame({"movie_id": [10, 20, 99], "rating": [5.0, 1.0, 3.0]})
+    index, weights = knn.input_weights(rated, position, "centered")
+    assert index.tolist() == [0, 1] and weights[0] > 0 > weights[1]  # 99 не кандидат – пропущен
+
+
+def test_user_knn_uses_neighbours_but_not_self(taste):
+    knn._cache.clear()
+    pool = np.arange(1, 8)
+    model = knn.UserKNN(k=5).fit(taste, pool)
+    assert set(model.recommend(inputs(4, 7), 2)) == {5, 6}  # соседи – вторая компания
+    alone = knn.UserKNN(k=1).fit(taste, pool)
+    # постоянный человек 0 – ближайший сам себе; без самого себя сосед из той же компании всё равно есть
+    assert alone.scores(inputs(1, 2, 3, 7), user=0)[np.searchsorted(pool, 1)] > 0

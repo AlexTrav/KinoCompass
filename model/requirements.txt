@@ -5,5 +5,7 @@ pyarrow==26.0.1
 # тесты значимости и рисунки (оформление – research/style.py)
 scipy==1.18.1
 matplotlib==3.11.2
+# соседи и факторизация (item-kNN, ALS, BPR) – C++ с потоками на все ядра
+implicit==0.7.3
 # тесты протокола, метрик и моделей (make test)
 pytest==9.2.0

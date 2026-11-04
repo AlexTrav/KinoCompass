@@ -1,4 +1,4 @@
-.PHONY: image baselines figures test
+.PHONY: image baselines knn figures test
 
 IMAGE := kinocompass-model
 
@@ -19,6 +19,10 @@ image:
 # базовые модели: скачать набор в память, прогнать все сценарии -> reports/baselines/$(PERIOD).json
 baselines: image
 	$(RUN) python evaluate.py baselines
+
+# соседи: item-kNN (сетка из 8 настроек) и user-kNN (3) вместе с планкой -> reports/knn/$(PERIOD).json
+knn: image
+	$(RUN) python evaluate.py knn
 
 # рисунки по сохранённым отчётам (набор не нужен); шрифт Times New Roman – из Windows
 figures: image
