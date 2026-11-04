@@ -10,3 +10,37 @@
 Автор: **Алексей Нерезов**.
 
 > Проект в работе.
+
+## Что уже сделано
+
+- данные: скачивание MovieLens 32M с проверкой md5, parquet для исследования и моделей, каталог из
+  23 349 фильмов (99 % оценок) с названиями на русском, казахском и английском из Wikidata и постерами
+  TMDb, проверка данных – [data/](data/README.md).
+
+## Запуск
+
+Нужен только Docker и make:
+
+```bash
+make data    # скачать MovieLens 32M, собрать parquet и каталог фильмов, проверить
+make check   # проверить данные и каталог
+make test    # автотесты
+```
+
+Для постеров нужен ключ TMDb: `TMDB_TOKEN=<Ключ доступа к API>` в файле `.env` в корне проекта
+(в git не попадает).
+
+## Структура
+
+```
+KinoCompass/
+  data/      – скачивание MovieLens, parquet, каталог фильмов (catalog/ – в git, остальное – нет)
+  Makefile   – общие команды
+```
+
+## Данные
+
+MovieLens 32M – GroupLens Research ([условия](data/catalog/ml-32m-README.txt): некоммерческое
+использование), F. M. Harper, J. A. Konstan. The MovieLens Datasets: History and Context. ACM TiiS, 2015.
+Названия фильмов – [Wikidata](https://www.wikidata.org/) (CC0). Постеры – [TMDb](https://www.themoviedb.org/):
+this product uses the TMDB API but is not endorsed or certified by TMDB.

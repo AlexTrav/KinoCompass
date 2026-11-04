@@ -1,0 +1,6 @@
+requests==2.34.2
+pandas==3.1.0
+# чтение CSV MovieLens и parquet для исследования и моделей
+pyarrow==26.0.1
+# тесты сбора и проверки данных (make test)
+pytest==9.2.0
