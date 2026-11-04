@@ -2,24 +2,19 @@ from pathlib import Path
 
 # корень папки data: data/collect/config.py -> collect -> data
 DATA_DIR = Path(__file__).resolve().parents[1]
-RAW_DIR = DATA_DIR / "raw"  # архив MovieLens и распакованные CSV (около 1 ГБ) – в git не идут, скачиваются заново
-WORK_DIR = DATA_DIR / "work"  # те же таблицы в parquet для исследования и моделей – в git не идут
-CATALOG_DIR = DATA_DIR / "catalog"  # каталог фильмов для сайта и моделей – хранится в git
+CATALOG_DIR = DATA_DIR / "catalog"  # каталог фильмов для сайта и моделей – единственное, что хранится (в git)
 
-# MovieLens 32M (GroupLens): 5-звёздочные оценки и теги с 09.01.1995 по 12.10.2023
+# MovieLens 32M (GroupLens): 5-звёздочные оценки и теги с 09.01.1995 по 12.10.2023. Набор на диске не
+# хранится: каждый запуск скачивает архив в память и читает CSV прямо из него (collect/movielens.py)
 DATASET = "ml-32m"
 ZIP_URL = f"https://files.grouplens.org/datasets/movielens/{DATASET}.zip"
 MD5_URL = f"{ZIP_URL}.md5"
-ZIP_PATH = RAW_DIR / f"{DATASET}.zip"
-CSV_DIR = RAW_DIR / DATASET
-CSV_FILES = ("ratings.csv", "tags.csv", "movies.csv", "links.csv", "README.txt")
 
 # эталонные размеры из README набора: проверка, что скачано и разобрано всё
 EXPECTED = {"ratings": 32_000_204, "tags": 2_000_072, "movies": 87_585, "users": 200_948}
 # границы периода по README (UTC); при проверке – с запасом в сутки на часовые пояса
 FIRST_DAY = "1995-01-09"
 LAST_DAY = "2023-10-12"
-RATING_VALUES = [x / 2 for x in range(1, 11)]  # 0,5 … 5 с шагом 0,5
 GENRES = {
     "Action", "Adventure", "Animation", "Children", "Comedy", "Crime", "Documentary", "Drama", "Fantasy",
     "Film-Noir", "Horror", "IMAX", "Musical", "Mystery", "Romance", "Sci-Fi", "Thriller", "War", "Western",

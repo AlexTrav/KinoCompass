@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from .config import EXPECTED, FIRST_DAY, GENRES, LAST_DAY, MIN_RATINGS, RATING_VALUES
+from .config import EXPECTED, FIRST_DAY, GENRES, LAST_DAY, MIN_RATINGS
 
 
 def _count(name: str, actual: int, expected: dict | None) -> list[str]:
@@ -11,11 +11,16 @@ def _count(name: str, actual: int, expected: dict | None) -> list[str]:
 
 
 # оценки: число строк и пользователей как в README, шкала 0,5–5 с шагом 0,5, даты в периоде набора,
-# одна оценка на пару «пользователь – фильм», все фильмы есть в movies. expected=None – без сверки с README
+# одна оценка на пару «пользователь – фильм», все фильмы есть в movies. expected=None – без сверки с README.
+# На 32 млн строк всё считается массивами numpy, а не хэш-таблицами pandas (nunique, isin, unique): те
+# поднимали пик памяти контейнера почти на 1,5 ГБ
 def check_ratings(ratings: pd.DataFrame, movie_ids, expected: dict | None = EXPECTED) -> list[str]:
+    users = ratings["user_id"].to_numpy(np.int64)
+    movies = ratings["movie_id"].to_numpy(np.int64)
     problems = _count("ratings", len(ratings), expected)
-    problems += _count("users", ratings["user_id"].nunique(), expected)
-    bad = ~ratings["rating"].isin(RATING_VALUES)
+    problems += _count("users", int(np.count_nonzero(np.bincount(users))), expected)  # id – небольшие целые
+    doubled = ratings["rating"].to_numpy(np.float64) * 2  # шкала 0,5–5 с шагом 0,5 = целые 1–10
+    bad = (doubled != np.round(doubled)) | (doubled < 1) | (doubled > 10)
     if bad.any():
         problems.append(f"оценки вне шкалы 0,5–5: {int(bad.sum())}")
     first = pd.Timestamp(FIRST_DAY, tz="UTC") - pd.Timedelta(days=1)
@@ -23,14 +28,20 @@ def check_ratings(ratings: pd.DataFrame, movie_ids, expected: dict | None = EXPE
     outside = (ratings["time"] < first) | (ratings["time"] >= last)
     if outside.any():
         problems.append(f"оценки вне периода {FIRST_DAY} – {LAST_DAY}: {int(outside.sum())}")
-    # пара как одно число int64 (id фильма < 10^7) – уникальность через сортировку, без тяжёлого хэширования
-    keys = ratings["user_id"].to_numpy(np.int64) * 10_000_000 + ratings["movie_id"].to_numpy(np.int64)
-    duplicates = len(keys) - len(np.unique(keys))
+    # пара как одно число int64 (id фильма < 10^7), отсортированное на месте: повтор – равные соседи
+    keys = users * 10_000_000 + movies
+    keys.sort()
+    duplicates = int(np.count_nonzero(keys[1:] == keys[:-1]))
+    del keys
     if duplicates:
         problems.append(f"повторные оценки одной пары «пользователь – фильм»: {duplicates}")
-    unknown = ~ratings["movie_id"].isin(movie_ids)
-    if unknown.any():
-        problems.append(f"оценки фильмов, которых нет в movies: {int(unknown.sum())}")
+    # известные фильмы – битовая маска по id: проверка каждой оценки – одно обращение к массиву
+    known_ids = np.asarray(movie_ids, dtype=np.int64)
+    known = np.zeros(max(int(known_ids.max()), int(movies.max())) + 1, dtype=bool)
+    known[known_ids] = True
+    unknown = int(np.count_nonzero(~known[movies]))
+    if unknown:
+        problems.append(f"оценки фильмов, которых нет в movies: {unknown}")
     return problems
 
 

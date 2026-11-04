@@ -3,10 +3,6 @@
 .env.*
 !.env.example
 
-# сырые данные MovieLens и рабочие файлы – скачиваются и собираются командами make в data/
-data/raw/
-data/work/
-
 # python
 .venv/
 __pycache__/

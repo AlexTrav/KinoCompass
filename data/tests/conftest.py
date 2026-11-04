@@ -8,7 +8,7 @@ def utc(day: str) -> pd.Timestamp:
     return pd.Timestamp(day, tz="UTC")
 
 
-# маленький набор в формате work/*.parquet: фильм 1 – MIN_RATINGS оценок (попадает в каталог),
+# маленький набор в формате collect.movielens.load: фильм 1 – MIN_RATINGS оценок (попадает в каталог),
 # фильм 2 – на одну меньше (не попадает), фильм 3 – без оценок
 @pytest.fixture
 def ratings() -> pd.DataFrame:

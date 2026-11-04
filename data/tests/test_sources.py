@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 import requests
 
-from collect import download, net, tmdb, wikidata
+from collect import movielens, net, tmdb, wikidata
 from collect.config import POSTERS_COLUMNS, TITLES_COLUMNS
 from collect.store import load, save
 
@@ -39,54 +39,76 @@ def test_request_404_and_4xx(monkeypatch):
         net.request("GET", "https://example.org")
 
 
-# --- скачивание архива ----------------------------------------------------------------------------------------
+# --- набор MovieLens в памяти ---------------------------------------------------------------------------------
 
-def test_md5sum(tmp_path):
-    path = tmp_path / "f.bin"
-    path.write_bytes(b"kino" * 1000)
-    assert download.md5sum(path) == hashlib.md5(b"kino" * 1000).hexdigest()
+# маленький архив в формате ml-32m: те же файлы и колонки, теги с запятой и кавычками внутри поля
+CSV = {
+    "ratings.csv": "userId,movieId,rating,timestamp\n1,1,4.0,944006400\n1,2,3.5,1696982400\n",
+    "tags.csv": 'userId,movieId,tag,timestamp\n1,1,"funny, witty",944006400\n2,1,"say ""hi""",944006400\n',
+    "movies.csv": 'movieId,title,genres\n1,"Matrix, The (1999)",Action|Sci-Fi\n2,Heat (1995),Crime\n',
+    "links.csv": "movieId,imdbId,tmdbId\n1,0133093,603\n2,0113277,\n",
+    "README.txt": "Usage License\n",
+}
 
 
 def _fake_zip() -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
-        for name in ("ratings.csv", "tags.csv", "movies.csv", "links.csv", "README.txt"):
-            archive.writestr(f"ml-32m/{name}", "x\n")
+        for name, text in CSV.items():
+            archive.writestr(f"ml-32m/{name}", text)
     return buffer.getvalue()
 
 
-@pytest.fixture
-def raw(tmp_path, monkeypatch):
-    for name, value in {"RAW_DIR": tmp_path, "ZIP_PATH": tmp_path / "ml-32m.zip", "CSV_DIR": tmp_path / "ml-32m"}.items():
-        monkeypatch.setattr(download, name, value)
-    return tmp_path
+class Stream(FakeResponse):
+    # ответ с телом content; break_at – после стольких байт соединение «рвётся», как у GroupLens
+    def __init__(self, content: bytes, status: int = 200, break_at: int | None = None):
+        super().__init__(status, {"Content-Length": str(len(content))})
+        self.content, self.break_at = content, break_at
+
+    def iter_content(self, size):
+        for start in range(0, len(self.content), 100):
+            if self.break_at is not None and start >= self.break_at:
+                raise requests.exceptions.ChunkedEncodingError("Connection broken: IncompleteRead")
+            yield self.content[start: start + 100]
 
 
-def test_download_checks_md5_and_unpacks(raw, monkeypatch):
+@pytest.mark.parametrize("resume_status", [206, 200])
+def test_fetch_archive_resumes_after_break(monkeypatch, resume_status):
     content = _fake_zip()
+    calls = []
 
-    class Stream(FakeResponse):
-        def iter_content(self, size):
-            yield content
+    def fake_request(method, url, stream=False, headers=None):
+        calls.append(headers)
+        if len(calls) == 1:
+            return Stream(content, break_at=300)
+        start = int(headers["Range"][6:-1]) if resume_status == 206 else 0
+        return Stream(content[start:], status=resume_status)
 
-    monkeypatch.setattr(download, "request", lambda *a, **k: Stream(200, {"Content-Length": str(len(content))}))
-    status = download.download(expected=hashlib.md5(content).hexdigest())
-    assert status == "архив скачан, контрольная сумма совпадает, распакован"
-    assert (raw / "ml-32m" / "ratings.csv").exists()
-    # второй запуск ничего не качает
-    monkeypatch.setattr(download, "request", lambda *a, **k: pytest.fail("лишняя загрузка"))
-    assert download.download(expected=hashlib.md5(content).hexdigest()) == "архив уже скачан, контрольная сумма совпадает"
+    monkeypatch.setattr(movielens, "request", fake_request)
+    monkeypatch.setattr(movielens.time, "sleep", lambda s: None)
+    archive = movielens.fetch_archive(expected=hashlib.md5(content).hexdigest())
+    assert calls == [None, {"Range": "bytes=300-"}]  # докачка с места обрыва
+    assert movielens.read_text(archive, "README.txt") == "Usage License\n"  # md5 сошёлся и при 206, и при 200
 
 
-def test_download_rejects_broken_archive(raw, monkeypatch):
-    class Stream(FakeResponse):
-        def iter_content(self, size):
-            yield b"broken"
-
-    monkeypatch.setattr(download, "request", lambda *a, **k: Stream(200))
+def test_fetch_archive_checks_md5(monkeypatch):
+    content = _fake_zip()
+    monkeypatch.setattr(movielens, "request", lambda *a, **k: Stream(content))
+    archive = movielens.fetch_archive(expected=hashlib.md5(content).hexdigest())
+    assert movielens.read_text(archive, "README.txt") == "Usage License\n"
     with pytest.raises(SystemExit, match="контрольная сумма"):
-        download.download(expected="0" * 32)
-    assert not list(raw.iterdir())  # ни архива, ни .part
+        movielens.fetch_archive(expected="0" * 32)
+
+
+def test_load_reads_tables_from_archive():
+    frames = movielens.load(zipfile.ZipFile(io.BytesIO(_fake_zip())))
+    ratings, tags, links = frames["ratings"], frames["tags"], frames["links"]
+    assert list(ratings.columns) == ["user_id", "movie_id", "rating", "time"]
+    assert str(ratings["user_id"].dtype) == "int32" and str(ratings["rating"].dtype) == "float32"
+    assert ratings["time"].iloc[0] == pd.Timestamp("1999-12-01", tz="UTC")
+    assert tags["tag"].tolist() == ["funny, witty", 'say "hi"']
+    assert links["imdb_id"].tolist() == ["0133093", "0113277"] and pd.isna(links["tmdb_id"].iloc[1])
+    assert frames["movies"]["title"].iloc[0] == "Matrix, The (1999)"
 
 
 # --- кэш названий и постеров ----------------------------------------------------------------------------------
