@@ -1,4 +1,4 @@
-.PHONY: data check eda figures baselines knn test
+.PHONY: data check eda figures baselines knn factorization test
 
 # скачать MovieLens 32M в память, собрать каталог фильмов с названиями и постерами, проверить
 data:
@@ -24,6 +24,10 @@ baselines:
 # соседи: item-kNN и user-kNN на валидации -> model/reports/knn
 knn:
 	"$(MAKE)" -C model knn
+
+# матричная факторизация: ALS, BPR и SVD на валидации -> model/reports/factorization
+factorization:
+	"$(MAKE)" -C model factorization
 
 # все автотесты
 test:

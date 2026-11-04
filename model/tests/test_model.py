@@ -186,3 +186,66 @@ def test_user_knn_uses_neighbours_but_not_self(taste):
     alone = knn.UserKNN(k=1).fit(taste, pool)
     # постоянный человек 0 – ближайший сам себе; без самого себя сосед из той же компании всё равно есть
     assert alone.scores(inputs(1, 2, 3, 7), user=0)[np.searchsorted(pool, 1)] > 0
+
+
+# --- факторизация -----------------------------------------------------------------------------------------------
+
+import factorization  # noqa: E402
+
+
+def test_svd_transfers_taste_to_new_person():
+    """Люди 0–29 любят фильмы 1–2 (5 звёзд) и не любят 3–4 (1 звезда), люди 30–59 – наоборот. По одной
+    оценке вкус от строгости не отличить, поэтому новичок ставит две: любимому фильму и нелюбимому."""
+    rows = [(u, m, 5.0 if (u < 30) == (m <= 2) else 1.0, START - DAY) for u in range(60) for m in (1, 2, 3, 4)]
+    history = frame(rows)
+    model = factorization.SVD(factors=2, reg=0.01, iterations=10).fit(history, np.array([1, 2, 3, 4]))
+    first_company = pd.DataFrame({"movie_id": [1, 3], "rating": [5.0, 1.0]})
+    predicted = model.predict(first_company, np.array([2, 4, 99]))
+    assert predicted[0] > 4 and predicted[1] < 2  # вкус переносится с фильма 1 на 2, а 4 – чужой фильм
+    assert predicted[2] == pytest.approx(np.clip(model.mu + model.user_vector(first_company)[1], 0.5, 5))
+    assert model.recommend(first_company, 1).tolist() == [2]
+
+
+def test_als_and_bpr_fold_in_new_person(taste):
+    knn._cache.clear()
+    pool = np.arange(1, 8)
+    als = factorization.ALS(factors=4, regularization=0.01, iterations=10).fit(taste, pool)
+    assert set(als.recommend(inputs(4, 7), 2)) == {5, 6}
+    bpr = factorization.BPR(factors=4, learning_rate=0.05, iterations=200).fit(taste, pool)
+    scores = bpr.scores(inputs(4, 7))
+    assert scores.shape == (7,) and np.isfinite(scores).all()
+    assert len(bpr.recommend(inputs(), 3)) == 3  # пустой вход – советы по смещениям фильмов
+
+
+# --- прогон -----------------------------------------------------------------------------------------------------
+
+
+def test_run_fits_models_one_by_one(monkeypatch, taste):
+    """Прогон обучает модель, проверяет её во всех сценариях и освобождает память перед следующей."""
+    import evaluate
+
+    order = []
+
+    class Spy(baselines.Popularity):
+        def __init__(self, name):
+            self.name = name
+
+        def fit(self, history, pool):
+            order.append(("fit", self.name))
+            return super().fit(history, pool)
+
+        def release(self):
+            order.append(("release", self.name))
+
+    future = frame([(500, 1, 5.0, START + DAY), (500, 2, 4.0, START + 2 * DAY), (500, 3, 4.0, START + 3 * DAY),
+                    (500, 4, 4.0, START + 4 * DAY), (500, 5, 4.0, START + 5 * DAY), (500, 6, 4.0, START + 6 * DAY),
+                    (500, 7, 4.0, START + 7 * DAY), (500, 1, 4.0, START + 8 * DAY), (500, 2, 4.0, START + 9 * DAY),
+                    (500, 3, 5.0, START + 10 * DAY), (500, 4, 5.0, START + 11 * DAY), (0, 5, 5.0, START + DAY)])
+    history = pd.concat([taste, frame([(u, m, 4.0, START - DAY) for u in range(20, 40) for m in range(1, 8)])])
+    movies = pd.DataFrame({"movie_id": np.arange(1, 8), "title": ["x (2000)"] * 7, "genres": ["Drama"] * 7})
+    monkeypatch.setattr(evaluate, "load", lambda period: (history, future, movies))
+    monkeypatch.setattr(evaluate, "REPORTS", __import__("pathlib").Path("/tmp/reports"))
+    report = evaluate.run("spy", [Spy("a"), Spy("b")], [])
+    assert order == [("fit", "a"), ("release", "a"), ("fit", "b"), ("release", "b")]
+    assert set(report["score"]) == {"a", "b"} and report["scenarios"]["cold5"]["people"] == 1
+    assert "cold10" not in report["scenarios"]  # после 10 оценок угадывать нечего – сценарий пропущен

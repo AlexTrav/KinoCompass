@@ -96,6 +96,9 @@ def run(name: str, ranking: list[baselines.Recommender], rating: list[baselines.
     stages["load"] = round(time.time() - started, 1)
     pool = candidates(history)
     cases = scenarios(history, future, pool)
+    for scenario in [s for s, people in cases.items() if not people]:
+        print(f"сценарий {scenario}: нет подходящих людей – пропущен", flush=True)
+        del cases[scenario]
     stages["scenarios"] = round(time.time() - started - sum(stages.values()), 1)
     ctx = context(history, movies, pool)
     liked = future[future["rating"] >= POSITIVE]
@@ -108,29 +111,40 @@ def run(name: str, ranking: list[baselines.Recommender], rating: list[baselines.
         "fit_seconds": {}, "ranking": {}, "significance": {}, "rating": {},
     }
     print("сценарии:", report["scenarios"], flush=True)
-    for model in ranking:
+    # модели по одной: обучение -> проверка во всех сценариях -> освобождение памяти (EASE держит 2 ГБ)
+    per_user = {scenario: {} for scenario in cases}
+    report["ranking"] = {scenario: {} for scenario in cases}
+    report["rating"] = {scenario: {} for scenario in cases}
+    stages["fit"] = stages["evaluate"] = 0.0
+    for model in ranking + [m for m in rating if m not in ranking]:
         tic = time.time()
-        model.fit(history, pool)
+        if model in ranking:
+            model.fit(history, pool)
+        else:
+            model.fit(history)
         report["fit_seconds"][model.name] = round(time.time() - tic, 2)
-    for model in rating:
-        model.fit(history)
-    stages["fit"] = round(time.time() - started - sum(stages.values()), 1)
+        stages["fit"] += time.time() - tic
+        tic = time.time()
+        for scenario, people in cases.items():
+            if model in ranking:
+                frame, cover, ms = rank_model(model, people, ctx)
+                per_user[scenario][model.name] = frame[MAIN]
+                report["ranking"][scenario][model.name] = summarize(frame, cover, ms)
+                print(scenario, model.name, MAIN, report["ranking"][scenario][model.name][MAIN], flush=True)
+            if model in rating:  # SVD и советует, и предсказывает оценку – обучается один раз
+                report["rating"][scenario][model.name] = rate_model(model, people)
+        stages["evaluate"] += time.time() - tic
+        if hasattr(model, "release"):
+            model.release()
     users = []
-    for scenario, people in cases.items():
-        per_user, report["ranking"][scenario] = {}, {}
-        for model in ranking:
-            frame, cover, ms = rank_model(model, people, ctx)
-            per_user[model.name] = frame[MAIN]
-            report["ranking"][scenario][model.name] = summarize(frame, cover, ms)
-            print(scenario, model.name, MAIN, report["ranking"][scenario][model.name][MAIN], flush=True)
-        report["significance"][scenario] = significance(per_user)
-        report["rating"][scenario] = {model.name: rate_model(model, people) for model in rating}
-        users.append(pd.DataFrame(per_user).rename_axis("user").reset_index().assign(scenario=scenario))
+    for scenario in cases:
+        report["significance"][scenario] = significance(per_user[scenario])
+        users.append(pd.DataFrame(per_user[scenario]).rename_axis("user").reset_index().assign(scenario=scenario))
     # итоговый балл – среднее NDCG@10 по трём сценариям (критерий выбора настроек и модели по умолчанию)
     report["score"] = {model.name: round(float(np.mean([report["ranking"][s][model.name][MAIN] for s in cases])), 5)
                        for model in ranking}
     report["best"] = max(report["score"], key=report["score"].get) if ranking else None
-    stages["evaluate"] = round(time.time() - started - sum(stages.values()), 1)
+    stages = {key: round(value, 1) for key, value in stages.items()}
     report["stage_seconds"] = stages
     report["seconds"] = round(time.time() - started, 1)
     print("этапы, с:", stages, flush=True)
@@ -152,8 +166,14 @@ def main() -> None:
 
         # планка – лучшая базовая модель, в том же прогоне: те же люди, парный тест напрямую
         run("knn", [baselines.RecentPopularity(), *knn.item_grid(), *knn.user_grid()], [])
+    elif command == "factorization":
+        import factorization as f
+
+        svd = f.svd_grid()
+        run("factorization", [baselines.RecentPopularity(), *f.als_grid(), *f.bpr_grid(), *svd],
+            [baselines.Biases(), *svd])
     else:
-        sys.exit("использование: python evaluate.py baselines|knn")
+        sys.exit("использование: python evaluate.py baselines|knn|factorization")
 
 
 if __name__ == "__main__":

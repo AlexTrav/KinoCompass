@@ -1,4 +1,4 @@
-.PHONY: image baselines knn figures test
+.PHONY: image baselines knn factorization figures test
 
 IMAGE := kinocompass-model
 
@@ -23,6 +23,10 @@ baselines: image
 # соседи: item-kNN (сетка из 8 настроек) и user-kNN (3) вместе с планкой -> reports/knn/$(PERIOD).json
 knn: image
 	$(RUN) python evaluate.py knn
+
+# факторизация: ALS (8 настроек), BPR (4), SVD (4) вместе с планкой -> reports/factorization/$(PERIOD).json
+factorization: image
+	$(RUN) python evaluate.py factorization
 
 # рисунки по сохранённым отчётам (набор не нужен); шрифт Times New Roman – из Windows
 figures: image
