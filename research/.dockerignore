@@ -1,0 +1,8 @@
+figures
+results
+tests
+**/__pycache__
+**/.pytest_cache
+*.py
+*.md
+Makefile

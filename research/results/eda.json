@@ -1,0 +1,175 @@
+{
+  "ratings": 32000204,
+  "users": 200948,
+  "movies_rated": 84432,
+  "density": 0.001886,
+  "period": [
+    "1995-01-09",
+    "2023-10-13"
+  ],
+  "mean_rating": 3.5404,
+  "median_rating": 3.5,
+  "positive_share": 0.4981,
+  "half_stars_from": "2003-02",
+  "users_activity": {
+    "median": 73,
+    "mean": 159.2,
+    "p90": 364,
+    "max": 33332,
+    "gini": 0.5937,
+    "top1_share": 0.1257
+  },
+  "movies_popularity": {
+    "median": 5,
+    "with_min_ratings": 23350,
+    "gini": 0.9524,
+    "top1_share": 0.5488,
+    "top10_share": 0.957,
+    "single_rating_share": 0.2204
+  },
+  "first_day": {
+    "share_ratings_first_day": 0.6138,
+    "median_first_day": 54,
+    "share_users_15_plus_first_day": 0.9623,
+    "share_users_only_first_day": 0.5879
+  },
+  "popularity_vs_mean": {
+    "spearman": 0.2345,
+    "p": 4.154867076385898e-289,
+    "movies": 23350
+  },
+  "year_vs_mean": {
+    "spearman": -0.1193,
+    "p": 1.702295280693908e-74,
+    "movies": 23276
+  },
+  "age_at_rating": {
+    "median_age_years": 10,
+    "share_within_1_year": 0.1188,
+    "share_10_plus_years": 0.5237,
+    "share_before_release": 0.0
+  },
+  "genres_kruskal": {
+    "H": 4582.8,
+    "p": 0.0
+  },
+  "genre_cooccurrence_pairs": {
+    "positive": [
+      {
+        "a": "Animation",
+        "b": "Children",
+        "r": 0.434
+      },
+      {
+        "a": "Adventure",
+        "b": "Children",
+        "r": 0.265
+      },
+      {
+        "a": "Action",
+        "b": "Adventure",
+        "r": 0.262
+      },
+      {
+        "a": "Adventure",
+        "b": "Fantasy",
+        "r": 0.26
+      },
+      {
+        "a": "Mystery",
+        "b": "Thriller",
+        "r": 0.246
+      }
+    ],
+    "negative": [
+      {
+        "a": "Comedy",
+        "b": "Thriller",
+        "r": -0.245
+      },
+      {
+        "a": "Comedy",
+        "b": "Drama",
+        "r": -0.239
+      },
+      {
+        "a": "Documentary",
+        "b": "Drama",
+        "r": -0.223
+      },
+      {
+        "a": "Drama",
+        "b": "Horror",
+        "r": -0.205
+      },
+      {
+        "a": "Animation",
+        "b": "Drama",
+        "r": -0.171
+      }
+    ]
+  },
+  "genre_taste_pairs": {
+    "positive": [
+      {
+        "a": "Animation",
+        "b": "Children",
+        "r": 0.794
+      },
+      {
+        "a": "Animation",
+        "b": "Musical",
+        "r": 0.572
+      },
+      {
+        "a": "Action",
+        "b": "Sci-Fi",
+        "r": 0.551
+      },
+      {
+        "a": "Action",
+        "b": "Adventure",
+        "r": 0.549
+      },
+      {
+        "a": "Children",
+        "b": "Musical",
+        "r": 0.544
+      }
+    ],
+    "negative": [
+      {
+        "a": "Adventure",
+        "b": "Drama",
+        "r": -0.36
+      },
+      {
+        "a": "Action",
+        "b": "Drama",
+        "r": -0.337
+      },
+      {
+        "a": "Children",
+        "b": "Thriller",
+        "r": -0.334
+      },
+      {
+        "a": "Action",
+        "b": "Documentary",
+        "r": -0.325
+      },
+      {
+        "a": "Comedy",
+        "b": "Thriller",
+        "r": -0.317
+      }
+    ]
+  },
+  "genre_taste_users": 200948,
+  "tags": {
+    "distinct_tags": 131620,
+    "taggers": 15847,
+    "share_movies_any_tag": 0.944,
+    "share_movies_shared_tag": 0.6167
+  }
+}
