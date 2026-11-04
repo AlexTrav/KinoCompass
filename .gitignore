@@ -26,3 +26,6 @@ dist/
 
 # рисунки исследования собираются в папку отчёта (make -C research figures FIGURES=...)
 research/figures/
+
+# рисунки моделей собираются в папку отчёта (make -C model figures FIGURES=...)
+model/figures/
