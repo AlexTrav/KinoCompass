@@ -9,3 +9,8 @@ matplotlib==3.11.2
 implicit==0.7.3
 # тесты протокола, метрик и моделей (make test)
 pytest==9.2.0
+# контентная модель: TF-IDF (scikit-learn) и e5 (sentence-transformers на torch для процессора, без CUDA)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0+cpu
+sentence-transformers==6.2.0
+scikit-learn==1.9.1

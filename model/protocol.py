@@ -90,16 +90,33 @@ def scenarios(history: pd.DataFrame, future: pd.DataFrame, pool: np.ndarray) -> 
     return out
 
 
-def load(period: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Набор в память (collect.movielens.fetch), затем история и проверочный год; плюс таблица фильмов."""
+def new_items(history: pd.DataFrame, years: pd.Series, period: str) -> np.ndarray:
+    """«Новинки» – фильмы каталога сайта (years: год выпуска по movie_id), у которых до границы меньше
+    MIN_ITEM_RATINGS оценок: совместная фильтрация их не советует (их нет среди кандидатов), остаётся контент.
+    Каталог отобран по всем годам набора и содержит фильмы, вышедшие уже после проверочной части, – их никто не
+    мог оценить, поэтому в новинки идут только вышедшие не позже года её конца (фильмы без года – тоже)."""
+    last_year = int(PERIODS[period][1][:4])
+    released = years[~(years > last_year).fillna(False)].index.to_numpy()
+    counts = history["movie_id"].value_counts().reindex(released, fill_value=0)
+    return np.sort(counts.index[counts < MIN_ITEM_RATINGS].to_numpy())
+
+
+def _seconds(times: pd.Series) -> np.ndarray:
+    return times.dt.tz_localize(None).to_numpy().astype("datetime64[s]").astype(np.int64)
+
+
+def load(period: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Набор в память (collect.movielens.fetch), затем история и проверочный год; плюс таблица фильмов и теги,
+    поставленные строго до границы (теги из будущего подсказывали бы контентной модели проверочный год)."""
     from collect.movielens import fetch
 
     frames, _ = fetch()
     ratings = frames.pop("ratings")
-    times = ratings["time"].dt.tz_localize(None).to_numpy().astype("datetime64[s]").astype(np.int64)
     ratings = pd.DataFrame({"user_id": ratings["user_id"].to_numpy(np.int32),
                             "movie_id": ratings["movie_id"].to_numpy(np.int32),
-                            "rating": ratings["rating"].to_numpy(np.float32), "time": times})
+                            "rating": ratings["rating"].to_numpy(np.float32), "time": _seconds(ratings["time"])})
     history, future = split(ratings, period)
     del ratings
-    return history, future, frames["movies"]
+    tags = frames["tags"]
+    tags = tags[_seconds(tags["time"]) < bounds(period)[0]][["user_id", "movie_id", "tag"]].reset_index(drop=True)
+    return history, future, frames["movies"], tags

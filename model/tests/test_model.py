@@ -243,7 +243,8 @@ def test_run_fits_models_one_by_one(monkeypatch, taste):
                     (500, 3, 5.0, START + 10 * DAY), (500, 4, 5.0, START + 11 * DAY), (0, 5, 5.0, START + DAY)])
     history = pd.concat([taste, frame([(u, m, 4.0, START - DAY) for u in range(20, 40) for m in range(1, 8)])])
     movies = pd.DataFrame({"movie_id": np.arange(1, 8), "title": ["x (2000)"] * 7, "genres": ["Drama"] * 7})
-    monkeypatch.setattr(evaluate, "load", lambda period: (history, future, movies))
+    no_tags = pd.DataFrame(columns=["user_id", "movie_id", "tag"])
+    monkeypatch.setattr(evaluate, "load", lambda period: (history, future, movies, no_tags))
     monkeypatch.setattr(evaluate, "REPORTS", __import__("pathlib").Path("/tmp/reports"))
     report = evaluate.run("spy", [Spy("a"), Spy("b")], [])
     assert order == [("fit", "a"), ("release", "a"), ("fit", "b"), ("release", "b")]
@@ -271,3 +272,95 @@ def test_ease_closed_form(taste):
     assert np.allclose(model.b, expected, atol=1e-5)
     model.release()
     assert not hasattr(model, "b")
+
+
+# --- контентная модель ------------------------------------------------------------------------------------------
+
+import content  # noqa: E402
+
+
+def test_load_keeps_only_tags_before_boundary(monkeypatch):
+    """Теги из проверочного года подсказывали бы контентной модели будущее – в историю они не попадают."""
+    import collect.movielens
+
+    utc = lambda seconds: pd.to_datetime(seconds, unit="s", utc=True)  # noqa: E731
+    frames = {
+        "ratings": pd.DataFrame({"user_id": [1, 1], "movie_id": [1, 2], "rating": [4.0, 5.0],
+                                 "time": utc([START - DAY, START + DAY])}),
+        "tags": pd.DataFrame({"user_id": [1, 2], "movie_id": [1, 1], "tag": ["old", "future"],
+                              "time": utc([START - DAY, START + DAY])}),
+        "movies": pd.DataFrame({"movie_id": [1, 2], "title": ["a", "b"], "genres": ["Drama", "Drama"]}),
+    }
+    monkeypatch.setattr(collect.movielens, "fetch", lambda: (frames, {}))
+    history, future, movies, tags = protocol.load("validation")
+    assert len(history) == 1 and len(future) == 1 and tags["tag"].tolist() == ["old"]
+
+
+def test_new_items_are_catalog_films_with_few_ratings():
+    history = frame([(u, 1, 4.0, START - DAY) for u in range(25)] + [(0, 2, 4.0, START - DAY)])
+    years = pd.Series([1999, 2005, None, 2023], index=[1, 2, 3, 4], dtype="Int64")
+    # фильм 1 – 25 оценок (кандидат), 2 – одна, 3 – ни одной и без года, 4 – вышел после проверочного года
+    assert protocol.new_items(history, years, "validation").tolist() == [2, 3]
+    assert protocol.new_items(history, years, "test").tolist() == [2, 3, 4]
+
+
+@pytest.fixture
+def side():
+    """Две «компании» фильмов: 1–3 – фантастика про космос, 4–6 – мелодрамы; 7 – без описания."""
+    rows = [(m, "Sci-Fi", 1999, "space|robots", "Astronauts fly to a distant planet") for m in (1, 2, 3)]
+    rows += [(m, "Romance|Drama", 2005, "love", "Two lovers meet in Paris") for m in (4, 5, 6)]
+    rows += [(7, "", None, "", "")]
+    out = pd.DataFrame(rows, columns=["movie_id", "genres", "year", "tags", "overview_en"]).set_index("movie_id")
+    out["year"] = out["year"].astype("Int64")
+    for column in ("title", "title_en"):
+        out[column] = [f"Film {m}" for m in out.index]
+    out["title_ru"], out["overview_ru"] = "", ""
+    return out
+
+
+def test_tfidf_content_follows_profile(side, taste):
+    pool = np.arange(1, 8)
+    for words in (False, True):
+        model = content.TfidfContent(words=words)
+        model.attach(side)
+        model.fit(taste, pool)
+        assert set(model.recommend(inputs(1), 2)) == {2, 3}  # похожие по описанию, а не по оценкам
+        assert set(model.recommend(inputs(4, 99), 2)) == {5, 6}  # фильм вне каталога пропускается
+    # кандидат вне каталога (без описания) не ломает модель – балл 0
+    model.fit(taste, np.arange(1, 9))
+    assert model.scores(inputs(1))[7] == 0
+
+
+def test_content_centered_weights_push_disliked_down(side, taste):
+    model = content.TfidfContent(weighting="centered")
+    model.attach(side)
+    model.fit(taste, np.arange(1, 8))
+    liked_space = pd.DataFrame({"movie_id": [1, 4], "rating": [5.0, 1.0]})
+    scores = model.scores(liked_space)
+    assert scores[1] > 0 > scores[4]  # фантастика вверх, мелодрама вниз
+    same = pd.DataFrame({"movie_id": [1, 2], "rating": [3.0, 3.0]})
+    assert model.scores(same)[2] > 0  # одинаковые оценки – без «минусов», вес 1
+
+
+def test_e5_content_averages_languages(side, taste):
+    asked = []
+
+    def fake_encoder(texts):
+        asked.append(texts)
+        return np.array([[1.0, 0.0] if "Sci-Fi" in t else [0.0, 1.0] for t in texts], dtype=np.float32)
+
+    model = content.E5Content(("en", "ru"), encoder=fake_encoder)
+    model.attach(side)
+    model.fit(taste, np.arange(1, 8))
+    assert len(asked) == 2 and asked[0][0].startswith("Film 1. Sci-Fi. space, robots. Astronauts")
+    assert np.allclose(np.linalg.norm(model.matrix, axis=1), 1)
+    assert set(model.recommend(inputs(1), 2)) == {2, 3}
+    model.fit(taste, np.arange(1, 8))
+    assert len(asked) == 2  # векторы считаются один раз на описание
+
+
+def test_newest_orders_by_year(side, taste):
+    model = content.Newest()
+    model.attach(side)
+    model.fit(taste, np.arange(1, 8))
+    assert model.recommend(inputs(), 7).tolist()[:3] == [4, 5, 6] and model.recommend(inputs(), 7)[-1] == 7

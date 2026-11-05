@@ -1,4 +1,4 @@
-.PHONY: image baselines knn factorization figures test
+.PHONY: image baselines knn factorization content figures test
 
 IMAGE := kinocompass-model
 
@@ -9,9 +9,11 @@ export MSYS_NO_PATHCONV=1
 PERIOD ?= validation
 # рисунки – в папку отчёта, если передана: make figures FIGURES=/путь/к/Рисункам
 FIGURES ?= $(CURDIR)/figures
-# код моделей – с хоста; загрузчик набора и оформление рисунков – из data/collect и research (только чтение)
+# код моделей – с хоста; загрузчик набора, каталог фильмов и оформление рисунков – из data и research (только
+# чтение); том kinocompass-cache – модель e5 и векторы фильмов (в папку проекта не попадают)
 RUN := docker run --rm -e PERIOD=$(PERIOD) -v "$(CURDIR):/model" -v "$(CURDIR)/../data/collect:/data/collect:ro" \
-	-v "$(CURDIR)/../research:/research:ro" $(IMAGE)
+	-v "$(CURDIR)/../data/catalog:/data/catalog:ro" -v "$(CURDIR)/../research:/research:ro" \
+	-v kinocompass-cache:/cache $(IMAGE)
 
 image:
 	docker build -t $(IMAGE) .
@@ -27,6 +29,11 @@ knn: image
 # факторизация: ALS (8 настроек), BPR (4), SVD (4) вместе с планкой -> reports/factorization/$(PERIOD).json
 factorization: image
 	$(RUN) python evaluate.py factorization
+
+# контент: TF-IDF и e5 (4 варианта × 2 веса) с базой на кандидатах и «новинках»
+# -> reports/content/$(PERIOD).json и $(PERIOD)_new.json
+content: image
+	$(RUN) python evaluate.py content
 
 # рисунки по сохранённым отчётам (набор не нужен); шрифт Times New Roman – из Windows
 figures: image

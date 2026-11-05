@@ -17,7 +17,7 @@ import baselines
 from collect.catalog import parse_genres
 from collect.config import GENRES
 from metrics import KS, bootstrap_ci, coverage, diversity, holm, list_metrics, novelty, rmse_mae, wilcoxon
-from protocol import MIN_ITEM_RATINGS, PERIODS, POSITIVE, Case, candidates, load, scenarios
+from protocol import MIN_ITEM_RATINGS, PERIODS, POSITIVE, Case, candidates, load, new_items, scenarios
 
 REPORTS = Path(__file__).resolve().parent / "reports"
 MAIN = "ndcg@10"  # главная метрика: по ней выбирается лучшая модель и считается значимость
@@ -33,7 +33,8 @@ class Context:
 
 def context(history: pd.DataFrame, movies: pd.DataFrame, pool: np.ndarray) -> Context:
     size = int(max(movies["movie_id"].max(), history["movie_id"].max())) + 1
-    share = np.bincount(history["movie_id"], minlength=size) / len(history)
+    # фильм без оценок в истории (новинка) считается как полоценки: иначе новизна −log₂ 0 бесконечна
+    share = np.maximum(np.bincount(history["movie_id"], minlength=size), 0.5) / len(history)
     bits = np.zeros(size, dtype=np.uint32)
     index = {genre: i for i, genre in enumerate(GENRE_LIST)}
     for movie_id, genres in zip(movies["movie_id"], movies["genres"]):
@@ -88,22 +89,45 @@ def period_from_env() -> str:
     return period
 
 
-def run(name: str, ranking: list[baselines.Recommender], rating: list[baselines.GlobalMean]) -> dict:
+POOLS = {"candidates": "", "new": "_new"}  # набор кандидатов -> суффикс файлов отчёта
+
+
+def run(name: str, ranking: list[baselines.Recommender], rating: list[baselines.GlobalMean],
+        pools: tuple[str, ...] = ("candidates",)) -> dict:
+    """Набор скачивается один раз; затем для каждого набора кандидатов – свой отчёт: candidates – фильмы
+    минимум с 20 оценками до границы, new – «новинки» каталога с меньшим числом оценок (только контент)."""
     period = period_from_env()
     started = time.time()
-    stages = {}  # секунды по этапам: где уходит время прогона
-    history, future, movies = load(period)
-    stages["load"] = round(time.time() - started, 1)
-    pool = candidates(history)
+    history, future, movies, tags = load(period)
+    loaded = round(time.time() - started, 1)
+    side = None
+    if any(hasattr(model, "attach") for model in ranking):  # контентным моделям – описание фильмов
+        import content
+
+        side = content.build_side(tags)
+        for model in ranking:
+            if hasattr(model, "attach"):
+                model.attach(side)
+    reports = {}
+    for kind in pools:
+        pool = candidates(history) if kind == "candidates" else new_items(history, side["year"], period)
+        reports[kind] = run_pool(name, period, kind, history, future, movies, pool, ranking, rating,
+                                 {"load": loaded}, time.time())
+    return reports[pools[0]] if len(pools) == 1 else reports
+
+
+def run_pool(name, period, kind, history, future, movies, pool, ranking, rating, stages, started) -> dict:
+    print(f"кандидаты: {kind}, {len(pool)} фильмов", flush=True)
     cases = scenarios(history, future, pool)
     for scenario in [s for s, people in cases.items() if not people]:
         print(f"сценарий {scenario}: нет подходящих людей – пропущен", flush=True)
         del cases[scenario]
-    stages["scenarios"] = round(time.time() - started - sum(stages.values()), 1)
+    stages["scenarios"] = round(time.time() - started, 1)
     ctx = context(history, movies, pool)
     liked = future[future["rating"] >= POSITIVE]
     report = {
-        "period": period, "bounds": PERIODS[period], "positive": POSITIVE, "min_item_ratings": MIN_ITEM_RATINGS,
+        "period": period, "pool": kind, "bounds": PERIODS[period], "positive": POSITIVE,
+        "min_item_ratings": MIN_ITEM_RATINGS,
         "history_ratings": len(history), "period_ratings": len(future), "candidates": len(pool),
         "liked_outside_candidates": round(float((~liked["movie_id"].isin(pool)).mean()), 4),
         "scenarios": {s: {"people": len(c), "median_inputs": int(np.median([len(x.inputs) for x in c])),
@@ -146,13 +170,14 @@ def run(name: str, ranking: list[baselines.Recommender], rating: list[baselines.
     report["best"] = max(report["score"], key=report["score"].get) if ranking else None
     stages = {key: round(value, 1) for key, value in stages.items()}
     report["stage_seconds"] = stages
-    report["seconds"] = round(time.time() - started, 1)
+    report["seconds"] = round(stages["load"] + time.time() - started, 1)  # вместе с загрузкой набора
     print("этапы, с:", stages, flush=True)
-    out = REPORTS / name / f"{period}.json"
+    out = REPORTS / name / f"{period}{POOLS[kind]}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     # NDCG@10 каждого человека – для парных тестов между прогонами (в том числе из Colab)
-    pd.concat(users, ignore_index=True).round(5).to_csv(out.with_name(f"{period}_users.csv.gz"), index=False)
+    pd.concat(users, ignore_index=True).round(5).to_csv(out.with_name(f"{period}{POOLS[kind]}_users.csv.gz"),
+                                                        index=False)
     print(f"сохранено {out.relative_to(REPORTS.parent)} за {report['seconds']} с")
     return report
 
@@ -177,8 +202,14 @@ def main() -> None:
 
         # EASE на всех кандидатах – в Colab на GPU (notebooks/ease.ipynb); без GPU – только на маленьких данных
         run("ease", [baselines.RecentPopularity(), *ease.ease_grid()], [])
+    elif command == "content":
+        import content
+
+        # те же модели на двух наборах: кандидаты (сравнение с шагом 4) и «новинки» (только контент и база)
+        run("content", [baselines.RandomModel(), content.Newest(), baselines.RecentPopularity(), *content.grid()],
+            [], pools=("candidates", "new"))
     else:
-        sys.exit("использование: python evaluate.py baselines|knn|factorization|ease")
+        sys.exit("использование: python evaluate.py baselines|knn|factorization|ease|content")
 
 
 if __name__ == "__main__":
