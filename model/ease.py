@@ -47,7 +47,9 @@ def gram(matrix, dev: str | None) -> np.ndarray:
 
 def solve(g: np.ndarray, lam: float, dev: str | None):
     """B = I − P · diag(1 / diag P) при P = (G + λI)⁻¹ – в float64; на GPU всё на месте, без лишних копий,
-    и B (float32) остаётся на GPU."""
+    и B (float32) остаётся на GPU. G + λI симметрична и положительно определена, поэтому на GPU обращение –
+    через разложение Холецкого: в памяти одновременно две матрицы, а не три, как у linalg.inv (на тесте –
+    22 309 кандидатов, матрица 4 ГБ в float64, и inv не поместился в 15 ГБ T4)."""
     if dev is None:
         p = np.linalg.inv(g.astype(np.float64) + lam * np.eye(len(g)))
         b = -p / np.diag(p)[None, :]
@@ -57,8 +59,11 @@ def solve(g: np.ndarray, lam: float, dev: str | None):
 
     gg = torch.from_numpy(g).to(dev, dtype=torch.float64)
     gg.diagonal().add_(lam)
-    p = torch.linalg.inv(gg)
+    low = torch.linalg.cholesky(gg)
     del gg
+    torch.cuda.empty_cache()
+    p = torch.cholesky_inverse(low)
+    del low
     p.div_(-torch.diagonal(p).clone()[None, :])
     p.fill_diagonal_(0)
     out = p.float()
