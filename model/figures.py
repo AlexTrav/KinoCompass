@@ -216,11 +216,55 @@ def fig_search() -> None:
     save(fig, 19, "Поиск словами на трёх языках")
 
 
+FINAL_RU = {
+    "hybrid_popular_year_als_f64_r0.1_a1_w0.4": "популярность × ALS (модель сайта)",
+    "hybrid_popular_year_vae_z400_b0.5_w0.2": "популярность × Mult-VAE",
+    "vae_z400_b0.5": "Mult-VAE",
+    "user_knn_k200": "user-kNN",
+    "ease_l5000": "EASE",
+    "als_f64_r0.1_a1": "ALS",
+    "item_knn_cosine_k200_binary": "item-kNN",
+    "popular_year": "популярные за последний год",
+    "content_tfidf_meta_centered": "контент (TF-IDF)",
+    "svd_f64_r0.03": "SVD",
+}
+
+
+def fig_validation_test() -> None:
+    """Итоговый набор: балл на валидации (по ней выбирали) и на тесте (один прогон) для каждой модели."""
+    test, val = {}, {}
+    for run in ("final", "final_gpu", "final_ease"):
+        test |= load(run, "test")["score"]
+    for run in ("ease", "vae", "hybrid_vae", "final"):
+        val |= load(run)["score"]
+    names = sorted(FINAL_RU, key=lambda n: test[n])
+    y = np.arange(len(names))
+    fig, ax = plt.subplots(figsize=(10, 5.6), layout="constrained")
+    for i, n in enumerate(names):
+        ax.plot([val[n], test[n]], [i, i], color=MUTED, linewidth=2, zorder=1)
+    ax.scatter([val[n] for n in names], y, s=60, color=BLUE, label="валидация (выбор модели)", zorder=2,
+               edgecolor="white", linewidth=1)
+    ax.scatter([test[n] for n in names], y, s=60, color=ORANGE, label="тест (один прогон)", zorder=3,
+               edgecolor="white", linewidth=1)
+    for i, n in enumerate(names):
+        right = max(val[n], test[n])
+        ax.text(right + 0.006, i, num(test[n], 3), va="center", fontsize=10, color=INK2)
+    ax.set_yticks(y, [FINAL_RU[n] for n in names])
+    ax.set_xlim(0, max(max(test.values()), max(val[n] for n in names)) * 1.12)
+    ax.xaxis.set_major_formatter(COMMA)
+    ax.set_xlabel("NDCG@10, среднее по трём сценариям (подпись – тест)")
+    ax.grid(axis="y", visible=False)
+    ax.legend(loc="lower right")
+    save(fig, 21, "Модели на валидации и на итоговом тесте")
+
+
 def main() -> None:
     fig_baselines()
     fig_step4_best()
     fig_accuracy_coverage()
     fig_content()
+    if (REPORTS / "final_ease" / "test.json").exists():
+        fig_validation_test()
     if (REPORTS / "search" / "validation.json").exists():
         fig_search()
 
