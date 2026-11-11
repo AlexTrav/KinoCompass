@@ -61,6 +61,16 @@ def solve(g: np.ndarray, lam: float, dev: str | None, cols: int = COLS):
     import torch
 
     n = len(g)
+    # проверка до расчёта: разложение Холецкого держит две матрицы float64 n × n; не хватает – сразу стоп,
+    # а не падение через минуты (на итоговом тесте T4 трижды кончалась память)
+    if str(dev).startswith("cuda"):
+        free, total = torch.cuda.mem_get_info()
+        need = 2 * n * n * 8 + 2**29
+        if free < need:
+            raise SystemExit(f"EASE: на GPU свободно {free / 2**30:.1f} ГиБ из {total / 2**30:.1f}, "
+                             f"нужно {need / 2**30:.1f} – стоп")
+        print(f"EASE: на GPU свободно {free / 2**30:.1f} ГиБ, нужно {need / 2**30:.1f} – считаю полосами",
+              flush=True)
     gg = torch.from_numpy(g).to(dev, dtype=torch.float64)
     gg.diagonal().add_(lam)
     low = torch.linalg.cholesky(gg)
@@ -107,8 +117,8 @@ def solve_cpu(a: np.ndarray, lam: float, cols: int = 1024) -> np.ndarray:
 
 class EASE(Recommender):
     def __init__(self, lam: float = 500.0, solve_on: str = "auto"):
-        """solve_on="cpu" – обращение матрицы на процессоре (итоговый тест: на T4 не хватило видеопамяти);
-        баллы людям всё равно считаются на GPU, если он есть."""
+        """solve_on="cpu" – обращение матрицы на процессоре (запасной путь: на итоговом тесте в Colab ему не
+        хватило оперативной памяти); баллы людям всё равно считаются на GPU, если он есть."""
         self.lam, self.solve_on = lam, solve_on
         self.name = f"ease_l{lam:g}"
 

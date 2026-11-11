@@ -252,12 +252,17 @@ def main() -> None:
         import hybrid
         import vae
 
-        # итог шага 6, часть для GPU (Colab, notebooks/final_gpu.ipynb): лучшие EASE и Mult-VAE и смесь
-        # «популярность × Mult-VAE» с весом, выбранным на валидации; популярность – для парных сравнений
+        # итог шага 6, часть для GPU (Colab, notebooks/final_gpu.ipynb): лучший Mult-VAE и смесь «популярность ×
+        # Mult-VAE» с весом, выбранным на валидации; популярность – для парных сравнений. EASE – отдельно
+        # (final_ease): на тесте трижды не хватило памяти, и он не должен срывать прогон Mult-VAE
         popular, model = baselines.RecentPopularity(), vae.MultVAE(latent=400, beta=0.5)
         # смесь – раньше отдельного Mult-VAE: он учится один раз, а память освобождает последним
-        # EASE: обращение матрицы на процессоре – на тесте (22 309 кандидатов) не хватило видеопамяти T4
-        run("final_gpu", [popular, ease.EASE(5000.0, solve_on="cpu"), hybrid.Hybrid(popular, model, 0.2), model], [])
+        run("final_gpu", [popular, hybrid.Hybrid(popular, model, 0.2), model], [])
+    elif command == "final_ease":
+        import ease
+
+        # EASE λ = 5000 на тесте – обращение матрицы на GPU полосами, с проверкой свободной памяти до расчёта
+        run("final_ease", [baselines.RecentPopularity(), ease.EASE(5000.0)], [])
     elif command == "final":
         import content
         import factorization
@@ -276,7 +281,7 @@ def main() -> None:
         }, [baselines.Biases(), svd])
     else:
         sys.exit("использование: python evaluate.py baselines|knn|factorization|ease|content|vae|hybrid|hybrid_vae"
-                 "|final|final_gpu")
+                 "|final|final_gpu|final_ease")
 
 
 if __name__ == "__main__":
