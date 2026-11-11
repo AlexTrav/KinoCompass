@@ -5,14 +5,14 @@
     w · ранг базы + (1 − w) · ранг персональной модели.
 
 - Подбор: база – популярные за последний год, персональная – ALS, item-kNN или Mult-VAE (те, что умещаются
-  в память сайта). Сценарий проверки соответствует числу оценок человека (5, 10, вся история), поэтому вес w
-  для каждого числа оценок выбирается по своему сценарию (шаг 6в).
+  в память сайта). Вес w выбирается на валидации по каждому сценарию (5, 10 оценок, вся история); для смеси
+  с ALS лучший вес во всех трёх один – 0,4, поэтому на сайте один вес (шаг 6в).
 - Новинки: база – «свежие по году», персональная – контент (сходство описаний): на шаге 5 свежесть оказалась
   сильнее вкуса, а контент – персональнее."""
 import numpy as np
 import pandas as pd
 
-from baselines import Recommender
+from baselines import Recommender, fit_once
 
 
 def ranks(scores: np.ndarray) -> np.ndarray:
@@ -36,11 +36,8 @@ class Hybrid(Recommender):
     def fit(self, history, pool):
         super().fit(history, pool)
         # одна персональная модель и одна база на всю сетку весов: обучаются только при первой встрече
-        key = (id(history), len(history), len(pool), int(pool[0]), int(pool[-1]))
         for model in (self.base, self.personal):
-            if getattr(model, "fitted_on", None) != key:
-                model.fit(history, pool)
-                model.fitted_on = key
+            fit_once(model, history, pool)
         self.base_ranks = ranks(np.asarray(self.base.scores(pd.DataFrame({"movie_id": [], "rating": []})),
                                            dtype=np.float64))
         return self

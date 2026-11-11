@@ -453,3 +453,13 @@ def test_vae_batches_equal_dense_rows():
     matrix.eliminate_zeros()
     rows = np.array([4, 0, 29, 7, 0])
     assert np.array_equal(vae.Batches(matrix, "cpu")(rows).numpy(), matrix[rows].toarray())
+
+
+def test_recommend_breaks_ties_by_id():
+    """Равные баллы на границе первых k – выше меньший id (раньше argpartition выбирал среди них произвольно)."""
+    model = baselines.Static()
+    model.fit(frame([]), np.arange(1, 41))
+    model.static = np.r_[np.full(39, 1.0), 5.0]  # фильм 40 – лучший, остальные 39 – вровень
+    assert model.recommend(inputs(), 4).tolist() == [40, 1, 2, 3]
+    assert model.recommend(inputs(1, 2), 3).tolist() == [40, 3, 4]  # оценённые исключены
+    assert model.recommend(inputs(), 50).tolist() == [40, *range(1, 40)]  # k больше числа кандидатов

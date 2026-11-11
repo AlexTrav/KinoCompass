@@ -114,7 +114,9 @@ def run(name: str, ranking, rating: list[baselines.GlobalMean], pools: tuple[str
     reports = {}
     for kind in pools:
         pool = candidates(history) if kind == "candidates" else new_items(history, side["year"], period)
-        reports[kind] = run_pool(name, period, kind, history, future, movies, pool, per_pool[kind], rating,
+        # предсказание звёзд (rating) – только на первом наборе: на новинках RMSE не нужен
+        reports[kind] = run_pool(name, period, kind, history, future, movies, pool, per_pool[kind],
+                                 rating if kind == pools[0] else [],
                                  {"load": loaded}, time.time())
     return reports[pools[0]] if len(pools) == 1 else reports
 
@@ -146,7 +148,7 @@ def run_pool(name, period, kind, history, future, movies, pool, ranking, rating,
     for model in ranking + [m for m in rating if m not in ranking]:
         tic = time.time()
         if model in ranking:
-            model.fit(history, pool)
+            baselines.fit_once(model, history, pool)  # уже обученная внутри смеси – не переучивается
         else:
             model.fit(history)
         report["fit_seconds"][model.name] = round(time.time() - tic, 2)
@@ -163,6 +165,7 @@ def run_pool(name, period, kind, history, future, movies, pool, ranking, rating,
         stages["evaluate"] += time.time() - tic
         if hasattr(model, "release"):
             model.release()
+            model.fitted_on = None  # память освобождена – следующей смеси придётся обучить заново
     users = []
     for scenario in cases:
         report["significance"][scenario] = significance(per_user[scenario])
@@ -208,9 +211,11 @@ def main() -> None:
     elif command == "content":
         import content
 
-        # те же модели на двух наборах: кандидаты (сравнение с шагом 4) и «новинки» (только контент и база)
+        # те же модели на двух наборах: кандидаты (сравнение с шагом 4) и «новинки» (только контент и база);
+        # python evaluate.py content new – только новинки
+        pools = tuple(p for p in ("candidates", "new") if len(sys.argv) < 3 or p in sys.argv[2:])
         run("content", [baselines.RandomModel(), content.Newest(), baselines.RecentPopularity(), *content.grid()],
-            [], pools=("candidates", "new"))
+            [], pools=pools)
     elif command == "vae":
         import vae
 
@@ -242,8 +247,35 @@ def main() -> None:
         # python evaluate.py hybrid new – только новинки (минуты вместо 20 минут кандидатов)
         only = sys.argv[2:]
         run("hybrid", {kind: models for kind, models in pools.items() if not only or kind in only}, [])
+    elif command == "final_gpu":
+        import ease
+        import hybrid
+        import vae
+
+        # итог шага 6, часть для GPU (Colab, notebooks/final_gpu.ipynb): лучшие EASE и Mult-VAE и смесь
+        # «популярность × Mult-VAE» с весом, выбранным на валидации; популярность – для парных сравнений
+        popular, model = baselines.RecentPopularity(), vae.MultVAE(latent=400, beta=0.5)
+        # смесь – раньше отдельного Mult-VAE: он учится один раз, а память освобождает последним
+        run("final_gpu", [popular, ease.EASE(5000.0), hybrid.Hybrid(popular, model, 0.2), model], [])
+    elif command == "final":
+        import content
+        import factorization
+        import hybrid
+        import knn
+
+        # итог шага 6: лучшие настройки каждого семейства, выбранные на валидации, и гибриды для сайта; на тесте
+        # (PERIOD=test) – один прогон, модели учатся на обучении + валидации. EASE и Mult-VAE – в Colab (final_gpu)
+        popular, als = baselines.RecentPopularity(), factorization.ALS(64, 0.1, 1.0)
+        svd, newest = factorization.SVD(64, 0.03), content.Newest()
+        text = content.TfidfContent(words=True, weighting="centered")
+        run("final", {
+            "candidates": [popular, knn.UserKNN(200), knn.ItemKNN("cosine", 200, "binary"), als, svd,
+                           content.TfidfContent(words=False, weighting="centered"), hybrid.Hybrid(popular, als, 0.4)],
+            "new": [newest, text, hybrid.Hybrid(newest, text, 0.9)],
+        }, [baselines.Biases(), svd])
     else:
-        sys.exit("использование: python evaluate.py baselines|knn|factorization|ease|content|vae|hybrid|hybrid_vae")
+        sys.exit("использование: python evaluate.py baselines|knn|factorization|ease|content|vae|hybrid|hybrid_vae"
+                 "|final|final_gpu")
 
 
 if __name__ == "__main__":

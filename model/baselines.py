@@ -28,9 +28,24 @@ class Recommender:
         scores = np.asarray(self.scores(inputs, user), dtype=np.float64).copy()
         seen = self.position.reindex(inputs["movie_id"]).dropna().to_numpy(np.int64)
         scores[seen] = -np.inf
-        top = np.argpartition(-scores, k)[:k] if k < len(scores) else np.arange(len(scores))
-        top = top[np.lexsort((top, -scores[top]))]
+        if k < len(scores):
+            # argpartition среди равных на границе выбирает произвольно – берутся все, кто не хуже k-го балла
+            kth = scores[np.argpartition(-scores, k - 1)[k - 1]]
+            top = np.flatnonzero(scores >= kth)
+        else:
+            top = np.arange(len(scores))
+        top = top[np.lexsort((top, -scores[top]))][:k]
         return self.pool[top]
+
+
+def fit_once(model: Recommender, history: pd.DataFrame, pool: np.ndarray) -> Recommender:
+    """Обучить, если модель ещё не обучена на этих же данных: одна модель может стоять в прогоне и отдельно, и
+    внутри смеси (hybrid.py), – тогда она учится один раз (Mult-VAE на GPU – 8 минут)."""
+    key = (id(history), len(history), len(pool), int(pool[0]), int(pool[-1]))
+    if getattr(model, "fitted_on", None) != key:
+        model.fit(history, pool)
+        model.fitted_on = key
+    return model
 
 
 class Static(Recommender):
