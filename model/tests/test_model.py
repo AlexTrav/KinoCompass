@@ -463,3 +463,16 @@ def test_recommend_breaks_ties_by_id():
     assert model.recommend(inputs(), 4).tolist() == [40, 1, 2, 3]
     assert model.recommend(inputs(1, 2), 3).tolist() == [40, 3, 4]  # оценённые исключены
     assert model.recommend(inputs(), 50).tolist() == [40, *range(1, 40)]  # k больше числа кандидатов
+
+
+def test_ease_solvers_agree():
+    """Обращение на процессоре полосами (итоговый тест) и полосами через torch – та же B, что прямое обращение."""
+    import scipy.sparse as sp
+
+    for n, cols in ((61, 7), (61, 200)):
+        x = sp.random(500, n, density=0.3, random_state=n + cols, format="csr")
+        x.data[:] = 1
+        g = ease.gram(x, None)
+        direct = ease.solve(g, 50.0, None)
+        assert np.allclose(ease.solve_cpu(g.astype(np.float64), 50.0, cols), direct, atol=1e-6)
+        assert np.allclose(ease.solve(g, 50.0, "cpu", cols).numpy(), direct, atol=1e-6)

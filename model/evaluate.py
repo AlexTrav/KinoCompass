@@ -256,7 +256,8 @@ def main() -> None:
         # «популярность × Mult-VAE» с весом, выбранным на валидации; популярность – для парных сравнений
         popular, model = baselines.RecentPopularity(), vae.MultVAE(latent=400, beta=0.5)
         # смесь – раньше отдельного Mult-VAE: он учится один раз, а память освобождает последним
-        run("final_gpu", [popular, ease.EASE(5000.0), hybrid.Hybrid(popular, model, 0.2), model], [])
+        # EASE: обращение матрицы на процессоре – на тесте (22 309 кандидатов) не хватило видеопамяти T4
+        run("final_gpu", [popular, ease.EASE(5000.0, solve_on="cpu"), hybrid.Hybrid(popular, model, 0.2), model], [])
     elif command == "final":
         import content
         import factorization
