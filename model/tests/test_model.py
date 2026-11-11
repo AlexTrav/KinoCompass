@@ -364,3 +364,24 @@ def test_newest_orders_by_year(side, taste):
     model.attach(side)
     model.fit(taste, np.arange(1, 8))
     assert model.recommend(inputs(), 7).tolist()[:3] == [4, 5, 6] and model.recommend(inputs(), 7)[-1] == 7
+
+
+def test_search_counts_hits_and_genre_precision(side):
+    import search
+
+    assert search.genre_match(pd.Series(["Romance|Drama", "Romance|Comedy", "Comedy"]), "Romance&Comedy").tolist() \
+        == [False, True, False]
+    assert search.genre_match(pd.Series(["Sci-Fi", "Drama", ""]), "Sci-Fi|Drama").tolist() == [True, True, False]
+    queries = pd.DataFrame({"lang": ["en", "en"], "kind": ["plot", "genre"],
+                            "query": ["space", "love"], "expect": ["2", "Romance"]})
+    # подставной поиск: фантастика 1–3 первыми, затем мелодрамы 4–6, затем 7
+    order = np.array([3.0, 2.9, 2.8, 2.0, 1.9, 1.8, 0.0])
+    report = search.run_search(side, {"fake": lambda texts: np.tile(order, (len(texts), 1))}, queries)
+    first, second = report["variants"]["fake"]["queries"]
+    assert first["rank"] == 2 and first["hit"] == 1.0 and first["top3"] == ["Film 1", "Film 2", "Film 3"]
+    assert second["precision"] == pytest.approx(3 / 10)  # доля из 10 мест выдачи: фильмов всего 7, мелодрам 3
+    assert report["chance"]["Romance"] == pytest.approx(3 / 7, abs=1e-4)  # в отчёте – 4 знака
+    # запрос, о котором модель ничего не знает (все баллы равны), – пустая выдача, а не первые фильмы каталога
+    blind = search.run_search(side, {"blind": lambda texts: np.zeros((len(texts), 7))}, queries)
+    first, second = blind["variants"]["blind"]["queries"]
+    assert first["rank"] is None and first["top3"] == [] and second["precision"] == 0

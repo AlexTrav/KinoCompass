@@ -1,0 +1,1119 @@
+{
+  "period": "validation",
+  "queries": 30,
+  "catalog": 23349,
+  "top": 10,
+  "variants": {
+    "e5_en": {
+      "summary": {
+        "ru": {
+          "plot_hit": 0.4,
+          "genre_precision": 0.74
+        },
+        "kk": {
+          "plot_hit": 0.0,
+          "genre_precision": 0.22
+        },
+        "en": {
+          "plot_hit": 0.4,
+          "genre_precision": 0.84
+        }
+      },
+      "queries": [
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "игрушки оживают, когда хозяина нет дома",
+          "expect": "1",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Snoopy Come Home",
+            "The House of Magic",
+            "Garfield's Halloween Adventure"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "корабль столкнулся с айсбергом, история любви",
+          "expect": "1721",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Love Affair",
+            "Love",
+            "The Deep Blue Sea"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "мальчик один дома защищается от грабителей",
+          "expect": "586",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Michael",
+            "Tiger House",
+            "Seventh Son"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "парк с динозаврами вышел из-под контроля",
+          "expect": "480",
+          "rank": 4,
+          "hit": 1.0,
+          "top3": [
+            "From Beijing with Love",
+            "The Dinosaur Project",
+            "Jurassic Park III"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "рыба-клоун ищет своего сына в океане",
+          "expect": "6377",
+          "rank": 1,
+          "hit": 1.0,
+          "top3": [
+            "Finding Nemo",
+            "The Water Horse: Legend of the Deep",
+            "To the Sea"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "страшный фильм про призраков в доме",
+          "expect": "Horror",
+          "precision": 0.9,
+          "top3": [
+            "Scary Movie 2",
+            "Caveat",
+            "The Boogeyman"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "смешная комедия для всей семьи",
+          "expect": "Comedy",
+          "precision": 1.0,
+          "top3": [
+            "A Day's Pleasure",
+            "Monty Python's Fliegender Zirkus",
+            "Hello, I'm Your Aunt!"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "вестерн про ковбоев",
+          "expect": "Western",
+          "precision": 0.1,
+          "top3": [
+            "The Dust Bowl",
+            "Bowling for Columbine",
+            "The Adventures of Sherlock Holmes and Doctor Watson"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "документальный фильм о природе",
+          "expect": "Documentary",
+          "precision": 1.0,
+          "top3": [
+            "Wild China",
+            "Earth",
+            "Madagascar"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "мультфильм для детей",
+          "expect": "Animation",
+          "precision": 0.7,
+          "top3": [
+            "The Many Adventures of Winnie the Pooh",
+            "Pinocchio",
+            "The Mitten"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "ойыншықтар тірілетін мультфильм",
+          "expect": "1",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "The Misadventures of Rick and Morty",
+            "The Ugly Duckling",
+            "The Dust Bowl"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "мұзтауға соқтығысқан кеме туралы фильм",
+          "expect": "1721",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "The Story of Film: An Odyssey",
+            "The Misadventures of Rick and Morty",
+            "Fishing with John"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "динозаврлар паркі",
+          "expect": "480",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Sherlock: The Empty Hearse",
+            "The Misadventures of Rick and Morty",
+            "Neznaika na lune"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "ғарышқа саяхат, қара құрдым",
+          "expect": "109487",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Stephen Fry In America - New World",
+            "The Misadventures of Rick and Morty",
+            "Roots"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "арыстан патшасы",
+          "expect": "364",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Sherlock: The Empty Hearse",
+            "His Last Vow",
+            "The 3 Rs"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "қорқынышты фильм",
+          "expect": "Horror",
+          "precision": 0.1,
+          "top3": [
+            "Beastie Boys: Sabotage",
+            "Sherlock: The Empty Hearse",
+            "Louis Theroux: By Reason of Insanity"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "күлкілі комедия",
+          "expect": "Comedy",
+          "precision": 0.8,
+          "top3": [
+            "Patrice O'Neal: Elephant in the Room",
+            "Smiling Friends",
+            "The Misadventures of Rick and Morty"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "соғыс туралы фильм",
+          "expect": "War",
+          "precision": 0.0,
+          "top3": [
+            "Beastie Boys: Sabotage",
+            "A Century of Cinema",
+            "The Story of Film: An Odyssey"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "балаларға арналған мультфильм",
+          "expect": "Animation",
+          "precision": 0.1,
+          "top3": [
+            "Trophy Kids",
+            "The Misadventures of Rick and Morty",
+            "The Defiant Ones"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "махаббат туралы фильм",
+          "expect": "Romance",
+          "precision": 0.1,
+          "top3": [
+            "Louis Theroux: Extreme Love - Autism",
+            "Beastie Boys: Sabotage",
+            "The Story of Film: An Odyssey"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "a hacker discovers reality is a simulation",
+          "expect": "2571",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "WarGames: The Dead Code",
+            "A Glitch in the Matrix",
+            "Debug"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "thieves enter dreams to plant an idea",
+          "expect": "79132",
+          "rank": 7,
+          "hit": 1.0,
+          "top3": [
+            "Inside",
+            "Lying and Stealing",
+            "Extracted"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "a shark terrorizes a beach town",
+          "expect": "1387",
+          "rank": 1,
+          "hit": 1.0,
+          "top3": [
+            "Jaws",
+            "Shark Night 3D",
+            "Jaws 2"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "a teenager travels back in time in a DeLorean",
+          "expect": "1270",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "41",
+            "Eegah",
+            "Haunter"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "an old man flies his house with balloons",
+          "expect": "68954",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Billy's Balloon",
+            "The 101-Year-Old Man Who Skipped Out on the Bill and Disappeared",
+            "Balloon"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "zombie apocalypse",
+          "expect": "Horror",
+          "precision": 0.9,
+          "top3": [
+            "Anna and the Apocalypse",
+            "The ReZort",
+            "Scouts Guide to the Zombie Apocalypse"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "romantic comedy in New York",
+          "expect": "Romance&Comedy",
+          "precision": 0.7,
+          "top3": [
+            "New Year's Eve",
+            "A Rainy Day in New York",
+            "Love In the Time of Money"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "space battle sci-fi",
+          "expect": "Sci-Fi",
+          "precision": 0.9,
+          "top3": [
+            "Battle Beyond the Stars",
+            "Space Sweepers",
+            "2010: The Year We Make Contact"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "detective solves a murder mystery",
+          "expect": "Mystery|Crime",
+          "precision": 0.8,
+          "top3": [
+            "Stolen",
+            "Curdled",
+            "Who Killed Santa? A Murderville Murder Mystery"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "animated movie about animals",
+          "expect": "Animation",
+          "precision": 0.9,
+          "top3": [
+            "Animal Farm",
+            "The Mitten",
+            "The Tigger Movie"
+          ]
+        }
+      ]
+    },
+    "e5_enru": {
+      "summary": {
+        "ru": {
+          "plot_hit": 1.0,
+          "genre_precision": 0.9
+        },
+        "kk": {
+          "plot_hit": 0.2,
+          "genre_precision": 0.56
+        },
+        "en": {
+          "plot_hit": 0.2,
+          "genre_precision": 0.88
+        }
+      },
+      "queries": [
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "игрушки оживают, когда хозяина нет дома",
+          "expect": "1",
+          "rank": 3,
+          "hit": 1.0,
+          "top3": [
+            "Toy Story That Time Forgot",
+            "Snoopy Come Home",
+            "Toy Story"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "корабль столкнулся с айсбергом, история любви",
+          "expect": "1721",
+          "rank": 7,
+          "hit": 1.0,
+          "top3": [
+            "Love Affair",
+            "Let the Sunshine In",
+            "An Affair to Remember"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "мальчик один дома защищается от грабителей",
+          "expect": "586",
+          "rank": 4,
+          "hit": 1.0,
+          "top3": [
+            "Home Sweet Home Alone",
+            "Home Alone: The Holiday Heist",
+            "The Son of No One"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "парк с динозаврами вышел из-под контроля",
+          "expect": "480",
+          "rank": 1,
+          "hit": 1.0,
+          "top3": [
+            "Jurassic Park",
+            "The Land Before Time VI: The Secret of Saurus Rock",
+            "Walking With Dinosaurs"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "рыба-клоун ищет своего сына в океане",
+          "expect": "6377",
+          "rank": 1,
+          "hit": 1.0,
+          "top3": [
+            "Finding Nemo",
+            "The Water Horse: Legend of the Deep",
+            "The Deep End of the Ocean"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "страшный фильм про призраков в доме",
+          "expect": "Horror",
+          "precision": 0.9,
+          "top3": [
+            "House on Haunted Hill",
+            "Caveat",
+            "Madhouse"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "смешная комедия для всей семьи",
+          "expect": "Comedy",
+          "precision": 1.0,
+          "top3": [
+            "Hello, I'm Your Aunt!",
+            "A Day's Pleasure",
+            "Everybody's Fine"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "вестерн про ковбоев",
+          "expect": "Western",
+          "precision": 0.7,
+          "top3": [
+            "Rustlers' Rhapsody",
+            "The Cowboy Way",
+            "Cowboy"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "документальный фильм о природе",
+          "expect": "Documentary",
+          "precision": 1.0,
+          "top3": [
+            "Earth",
+            "Before the Flood",
+            "The 11th Hour"
+          ]
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "мультфильм для детей",
+          "expect": "Animation",
+          "precision": 0.9,
+          "top3": [
+            "Bugs Bunny's 3rd Movie: 1001 Rabbit Tales",
+            "The Boy and the World",
+            "Tom and Jerry: The Movie"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "ойыншықтар тірілетін мультфильм",
+          "expect": "1",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "The Misadventures of Rick and Morty",
+            "Кентервильское привидение",
+            "The Ugly Duckling"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "мұзтауға соқтығысқан кеме туралы фильм",
+          "expect": "1721",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "The Story of Film: An Odyssey",
+            "Voyage to the Bottom of the Sea",
+            "The Misadventures of Rick and Morty"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "динозаврлар паркі",
+          "expect": "480",
+          "rank": 4,
+          "hit": 1.0,
+          "top3": [
+            "Sherlock: The Empty Hearse",
+            "Walking With Dinosaurs",
+            "Dinotopia"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "ғарышқа саяхат, қара құрдым",
+          "expect": "109487",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "The Misadventures of Rick and Morty",
+            "Stephen Fry In America - New World",
+            "The Trap: What Happened to Our Dream of Freedom"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "арыстан патшасы",
+          "expect": "364",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Sherlock: The Empty Hearse",
+            "His Last Vow",
+            "Wolf Hall"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "қорқынышты фильм",
+          "expect": "Horror",
+          "precision": 0.5,
+          "top3": [
+            "Sherlock: The Empty Hearse",
+            "Beastie Boys: Sabotage",
+            "Bag of Bones"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "күлкілі комедия",
+          "expect": "Comedy",
+          "precision": 0.9,
+          "top3": [
+            "Hello, I'm Your Aunt!",
+            "Legally Blonde: The Musical",
+            "A Day's Pleasure"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "соғыс туралы фильм",
+          "expect": "War",
+          "precision": 0.4,
+          "top3": [
+            "On the Milky Road",
+            "For the Moment",
+            "Come and See"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "балаларға арналған мультфильм",
+          "expect": "Animation",
+          "precision": 0.6,
+          "top3": [
+            "Trophy Kids",
+            "The Mitten",
+            "The Ugly Duckling"
+          ]
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "махаббат туралы фильм",
+          "expect": "Romance",
+          "precision": 0.4,
+          "top3": [
+            "On the Milky Road",
+            "To Joy",
+            "A Short Film About Love"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "a hacker discovers reality is a simulation",
+          "expect": "2571",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "The Thirteenth Floor",
+            "WarGames: The Dead Code",
+            "Antitrust"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "thieves enter dreams to plant an idea",
+          "expect": "79132",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Inside",
+            "Extracted",
+            "Vibes"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "a shark terrorizes a beach town",
+          "expect": "1387",
+          "rank": 1,
+          "hit": 1.0,
+          "top3": [
+            "Jaws",
+            "The Shallows",
+            "Shark Night 3D"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "a teenager travels back in time in a DeLorean",
+          "expect": "1270",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Guest from the Future",
+            "Time Traveller: The Girl Who Leapt Through Time",
+            "The Maze Runner"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "an old man flies his house with balloons",
+          "expect": "68954",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Folks!",
+            "The Hire: Ticker",
+            "It Happened on Fifth Avenue"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "zombie apocalypse",
+          "expect": "Horror",
+          "precision": 1.0,
+          "top3": [
+            "Anna and the Apocalypse",
+            "Dead Rising: Watchtower",
+            "Day of the Dead: Bloodline"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "romantic comedy in New York",
+          "expect": "Romance&Comedy",
+          "precision": 0.7,
+          "top3": [
+            "Manhattan",
+            "While We're Young",
+            "A Rainy Day in New York"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "space battle sci-fi",
+          "expect": "Sci-Fi",
+          "precision": 1.0,
+          "top3": [
+            "Space Sweepers",
+            "2010: The Year We Make Contact",
+            "Battle Beyond the Stars"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "detective solves a murder mystery",
+          "expect": "Mystery|Crime",
+          "precision": 0.9,
+          "top3": [
+            "Appointment with Death",
+            "Ittefaq: It happened one night",
+            "Righteous Kill"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "animated movie about animals",
+          "expect": "Animation",
+          "precision": 0.8,
+          "top3": [
+            "Peter Rabbit",
+            "Winnie Pooh",
+            "We the Animals"
+          ]
+        }
+      ]
+    },
+    "tfidf_text": {
+      "summary": {
+        "ru": {
+          "plot_hit": 0.0,
+          "genre_precision": 0.0
+        },
+        "kk": {
+          "plot_hit": 0.0,
+          "genre_precision": 0.0
+        },
+        "en": {
+          "plot_hit": 0.2,
+          "genre_precision": 0.48
+        }
+      },
+      "queries": [
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "игрушки оживают, когда хозяина нет дома",
+          "expect": "1",
+          "rank": null,
+          "hit": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "корабль столкнулся с айсбергом, история любви",
+          "expect": "1721",
+          "rank": null,
+          "hit": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "мальчик один дома защищается от грабителей",
+          "expect": "586",
+          "rank": null,
+          "hit": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "парк с динозаврами вышел из-под контроля",
+          "expect": "480",
+          "rank": null,
+          "hit": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "ru",
+          "kind": "plot",
+          "query": "рыба-клоун ищет своего сына в океане",
+          "expect": "6377",
+          "rank": null,
+          "hit": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "страшный фильм про призраков в доме",
+          "expect": "Horror",
+          "precision": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "смешная комедия для всей семьи",
+          "expect": "Comedy",
+          "precision": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "вестерн про ковбоев",
+          "expect": "Western",
+          "precision": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "документальный фильм о природе",
+          "expect": "Documentary",
+          "precision": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "ru",
+          "kind": "genre",
+          "query": "мультфильм для детей",
+          "expect": "Animation",
+          "precision": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "ойыншықтар тірілетін мультфильм",
+          "expect": "1",
+          "rank": null,
+          "hit": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "мұзтауға соқтығысқан кеме туралы фильм",
+          "expect": "1721",
+          "rank": null,
+          "hit": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "динозаврлар паркі",
+          "expect": "480",
+          "rank": null,
+          "hit": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "ғарышқа саяхат, қара құрдым",
+          "expect": "109487",
+          "rank": null,
+          "hit": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "kk",
+          "kind": "plot",
+          "query": "арыстан патшасы",
+          "expect": "364",
+          "rank": null,
+          "hit": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "қорқынышты фильм",
+          "expect": "Horror",
+          "precision": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "күлкілі комедия",
+          "expect": "Comedy",
+          "precision": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "соғыс туралы фильм",
+          "expect": "War",
+          "precision": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "балаларға арналған мультфильм",
+          "expect": "Animation",
+          "precision": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "kk",
+          "kind": "genre",
+          "query": "махаббат туралы фильм",
+          "expect": "Romance",
+          "precision": 0.0,
+          "top3": []
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "a hacker discovers reality is a simulation",
+          "expect": "2571",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Going By The Book",
+            "WarGames: The Dead Code",
+            "400 Days"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "thieves enter dreams to plant an idea",
+          "expect": "79132",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Happy New Year",
+            "Dragons Forever",
+            "Class of Nuke 'Em High"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "a shark terrorizes a beach town",
+          "expect": "1387",
+          "rank": 9,
+          "hit": 1.0,
+          "top3": [
+            "The New Kids",
+            "Back to the Beach",
+            "6-Headed Shark Attack"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "a teenager travels back in time in a DeLorean",
+          "expect": "1270",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "Driven",
+            "Haunter",
+            "Trailer Park Boys: Say Goodnight to the Bad Guys"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "plot",
+          "query": "an old man flies his house with balloons",
+          "expect": "68954",
+          "rank": null,
+          "hit": 0.0,
+          "top3": [
+            "George & A.J.",
+            "Suture",
+            "Trench Road"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "zombie apocalypse",
+          "expect": "Horror",
+          "precision": 0.5,
+          "top3": [
+            "Cockneys vs Zombies",
+            "It Stains the Sands Red",
+            "Army of Thieves"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "romantic comedy in New York",
+          "expect": "Romance&Comedy",
+          "precision": 0.3,
+          "top3": [
+            "Listy do M.",
+            "Jerrod Carmichael: Rothaniel",
+            "Lover's Knot"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "space battle sci-fi",
+          "expect": "Sci-Fi",
+          "precision": 0.5,
+          "top3": [
+            "The Matrix Revisited",
+            "The Sticky Fingers of Time",
+            "Mother"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "detective solves a murder mystery",
+          "expect": "Mystery|Crime",
+          "precision": 0.5,
+          "top3": [
+            "Lust for Love",
+            "The Mirror Crack'd",
+            "Hellraiser: Inferno"
+          ]
+        },
+        {
+          "lang": "en",
+          "kind": "genre",
+          "query": "animated movie about animals",
+          "expect": "Animation",
+          "precision": 0.6,
+          "top3": [
+            "Superman 75th Anniversary Animated Short",
+            "The Mitten",
+            "Adventures of Mowgli"
+          ]
+        }
+      ]
+    }
+  },
+  "chance": {
+    "Horror": 0.1121,
+    "Comedy": 0.3244,
+    "Western": 0.0175,
+    "Documentary": 0.0673,
+    "Animation": 0.0626,
+    "War": 0.0377,
+    "Romance": 0.1412,
+    "Romance&Comedy": 0.069,
+    "Sci-Fi": 0.0812,
+    "Mystery|Crime": 0.1495
+  }
+}

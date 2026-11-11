@@ -1,0 +1,31 @@
+lang,kind,query,expect
+ru,plot,"игрушки оживают, когда хозяина нет дома",1
+ru,plot,"корабль столкнулся с айсбергом, история любви",1721
+ru,plot,мальчик один дома защищается от грабителей,586
+ru,plot,парк с динозаврами вышел из-под контроля,480
+ru,plot,рыба-клоун ищет своего сына в океане,6377
+ru,genre,страшный фильм про призраков в доме,Horror
+ru,genre,смешная комедия для всей семьи,Comedy
+ru,genre,вестерн про ковбоев,Western
+ru,genre,документальный фильм о природе,Documentary
+ru,genre,мультфильм для детей,Animation
+kk,plot,ойыншықтар тірілетін мультфильм,1
+kk,plot,мұзтауға соқтығысқан кеме туралы фильм,1721
+kk,plot,динозаврлар паркі,480
+kk,plot,"ғарышқа саяхат, қара құрдым",109487
+kk,plot,арыстан патшасы,364
+kk,genre,қорқынышты фильм,Horror
+kk,genre,күлкілі комедия,Comedy
+kk,genre,соғыс туралы фильм,War
+kk,genre,балаларға арналған мультфильм,Animation
+kk,genre,махаббат туралы фильм,Romance
+en,plot,a hacker discovers reality is a simulation,2571
+en,plot,thieves enter dreams to plant an idea,79132
+en,plot,a shark terrorizes a beach town,1387
+en,plot,a teenager travels back in time in a DeLorean,1270
+en,plot,an old man flies his house with balloons,68954
+en,genre,zombie apocalypse,Horror
+en,genre,romantic comedy in New York,Romance&Comedy
+en,genre,space battle sci-fi,Sci-Fi
+en,genre,detective solves a murder mystery,Mystery|Crime
+en,genre,animated movie about animals,Animation

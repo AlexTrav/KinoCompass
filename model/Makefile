@@ -1,4 +1,4 @@
-.PHONY: image baselines knn factorization content figures test
+.PHONY: image baselines knn factorization content search figures test
 
 IMAGE := kinocompass-model
 
@@ -34,6 +34,10 @@ factorization: image
 # -> reports/content/$(PERIOD).json и $(PERIOD)_new.json
 content: image
 	$(RUN) python evaluate.py content
+
+# поиск словами: 30 запросов (ru, kk, en) по каталогу – e5 и TF-IDF -> reports/search/$(PERIOD).json
+search: image
+	$(RUN) python search.py
 
 # рисунки по сохранённым отчётам (набор не нужен); шрифт Times New Roman – из Windows
 figures: image

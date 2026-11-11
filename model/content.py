@@ -49,17 +49,31 @@ def text(row, lang: str) -> str:
     return ". ".join(p for p in parts if p)
 
 
+_model = []  # модель e5 загружается один раз за прогон
+
+
+def _e5():
+    if not _model:
+        from sentence_transformers import SentenceTransformer
+
+        _model.append(SentenceTransformer(E5_MODEL, device="cpu", cache_folder=str(CACHE / "hf")))
+    return _model[0]
+
+
+def embed_queries(texts: list[str]) -> np.ndarray:
+    """Векторы поисковых запросов: у e5 запрос и текст фильма различаются префиксами query: и passage:."""
+    return _e5().encode([f"query: {t}" for t in texts], normalize_embeddings=True, show_progress_bar=False,
+                        convert_to_numpy=True).astype(np.float32)
+
+
 def embed(texts: list[str]) -> np.ndarray:
     """Векторы e5 (единичной длины) – с кэшем в томе Docker: те же тексты не считаются второй раз."""
     key = hashlib.sha1("\n".join([E5_MODEL, *texts]).encode()).hexdigest()[:16]
     path = CACHE / "e5" / f"{key}.npy"
     if path.exists():
         return np.load(path)
-    from sentence_transformers import SentenceTransformer
-
-    model = SentenceTransformer(E5_MODEL, device="cpu", cache_folder=str(CACHE / "hf"))
     print(f"e5: {len(texts)} текстов", flush=True)
-    out = model.encode([f"passage: {t}" for t in texts], batch_size=64, normalize_embeddings=True,
+    out = _e5().encode([f"passage: {t}" for t in texts], batch_size=64, normalize_embeddings=True,
                        show_progress_bar=False, convert_to_numpy=True).astype(np.float32)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.save(path, out)
@@ -135,8 +149,15 @@ class TfidfContent(Content):
 
         docs = [self.tokens(row) for row in self.side.itertuples()]
         # признак хотя бы у двух фильмов: уникальный тег или слово ни с чем не связывает
-        vectorizer = TfidfVectorizer(analyzer=lambda doc: doc, min_df=2, sublinear_tf=True)
-        return vectorizer.fit_transform(docs).tocsr()
+        self.vectorizer = TfidfVectorizer(analyzer=lambda doc: doc, min_df=2, sublinear_tf=True)
+        return self.vectorizer.fit_transform(docs).tocsr()
+
+    def query_vector(self, query: str) -> sp.csr_matrix:
+        """Запрос словами – вектор по тем же английским словам описаний (другие языки TF-IDF не понимает)."""
+        from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+
+        words = [w for w in WORD_RE.findall(query.lower()) if w not in ENGLISH_STOP_WORDS]
+        return self.vectorizer.transform([words])
 
 
 class E5Content(Content):
