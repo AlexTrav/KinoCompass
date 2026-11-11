@@ -400,3 +400,56 @@ def test_vae_learns_companies_and_releases(taste):
     assert model.scores(inputs()).shape == (7,)  # пустой вход – тоже баллы
     model.release()
     assert not hasattr(model, "net")
+
+
+# --- гибрид -----------------------------------------------------------------------------------------------------
+
+def test_ranks_from_zero_to_one():
+    import hybrid
+
+    assert hybrid.ranks(np.array([10.0, -3.0, 5.0])).tolist() == [1.0, 0.0, 0.5]
+    assert hybrid.ranks(np.array([1.0, 1.0, 1.0])).tolist() == [1.0, 0.5, 0.0]  # равные – выше тот, кто раньше
+
+
+def test_hybrid_mixes_base_and_personal_and_fits_once(taste):
+    import hybrid
+
+    knn._cache.clear()
+    pool = np.arange(1, 8)
+    fits = []
+
+    class CountingKNN(knn.ItemKNN):
+        def fit(self, history, pool):
+            fits.append(1)
+            return super().fit(history, pool)
+
+    # популярность за год: фильм 7 смотрят все; персонально человек из второй компании – фильмы 5, 6
+    popular, personal = baselines.RecentPopularity(), CountingKNN("cosine", 10, "binary")
+    models = [hybrid.Hybrid(popular, personal, w) for w in (0.0, 0.5, 1.0)]
+    for model in models:
+        model.fit(taste, pool)
+    assert len(fits) == 1  # персональная модель обучена один раз на всю сетку весов
+    only_personal, half, only_base = (m.recommend(inputs(4), 3) for m in models)
+    assert set(only_personal[:2]) == {5, 6}
+    assert only_base[0] == 7
+    # w = 1 – порядок базы в точности: кто выше по популярности, тот выше и в гибриде
+    base, mixed = popular.scores(inputs()), models[2].scores(inputs(4))
+    assert all(mixed[i] > mixed[j] for i in range(7) for j in range(7) if base[i] > base[j])
+    assert 7 in half[:3] and {5, 6} & set(half[:3])  # смесь берёт и популярное, и своё
+    assert models[1].name == "hybrid_popular_year_item_knn_cosine_k10_binary_w0.5"
+
+
+def test_vae_batches_equal_dense_rows():
+    """Пачки на устройстве – те же строки, что toarray() на процессоре (в том числе пустые и повторы)."""
+    import scipy.sparse as sp
+
+    import vae
+
+    matrix = sp.random(30, 12, density=0.3, random_state=1, format="csr")
+    matrix.data[:] = 1
+    matrix = matrix.tolil()
+    matrix[4] = 0  # пустая строка
+    matrix = matrix.tocsr()
+    matrix.eliminate_zeros()
+    rows = np.array([4, 0, 29, 7, 0])
+    assert np.array_equal(vae.Batches(matrix, "cpu")(rows).numpy(), matrix[rows].toarray())

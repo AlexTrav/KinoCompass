@@ -92,26 +92,29 @@ def period_from_env() -> str:
 POOLS = {"candidates": "", "new": "_new"}  # набор кандидатов -> суффикс файлов отчёта
 
 
-def run(name: str, ranking: list[baselines.Recommender], rating: list[baselines.GlobalMean],
-        pools: tuple[str, ...] = ("candidates",)) -> dict:
+def run(name: str, ranking, rating: list[baselines.GlobalMean], pools: tuple[str, ...] = ("candidates",)) -> dict:
     """Набор скачивается один раз; затем для каждого набора кандидатов – свой отчёт: candidates – фильмы
-    минимум с 20 оценками до границы, new – «новинки» каталога с меньшим числом оценок (только контент)."""
+    минимум с 20 оценками до границы, new – «новинки» каталога с меньшим числом оценок (только контент).
+    ranking – список моделей для всех наборов или словарь «набор -> свои модели»."""
+    per_pool = ranking if isinstance(ranking, dict) else {kind: ranking for kind in pools}
+    pools = tuple(per_pool)
+    models = [model for group in per_pool.values() for model in group]
     period = period_from_env()
     started = time.time()
     history, future, movies, tags = load(period)
     loaded = round(time.time() - started, 1)
     side = None
-    if any(hasattr(model, "attach") for model in ranking):  # контентным моделям – описание фильмов
+    if any(hasattr(model, "attach") for model in models):  # контентным моделям – описание фильмов
         import content
 
         side = content.build_side(tags)
-        for model in ranking:
+        for model in models:
             if hasattr(model, "attach"):
                 model.attach(side)
     reports = {}
     for kind in pools:
         pool = candidates(history) if kind == "candidates" else new_items(history, side["year"], period)
-        reports[kind] = run_pool(name, period, kind, history, future, movies, pool, ranking, rating,
+        reports[kind] = run_pool(name, period, kind, history, future, movies, pool, per_pool[kind], rating,
                                  {"load": loaded}, time.time())
     return reports[pools[0]] if len(pools) == 1 else reports
 
@@ -213,8 +216,34 @@ def main() -> None:
 
         # Mult-VAE – в Colab на GPU (notebooks/vae.ipynb); без GPU – только на маленьких данных
         run("vae", [baselines.RecentPopularity(), *vae.vae_grid()], [])
+    elif command == "hybrid_vae":
+        import hybrid
+        import vae
+
+        # популярные за год × Mult-VAE (лучший вариант сетки шага 6а) – в Colab на GPU (notebooks/hybrid_vae.ipynb);
+        # сам Mult-VAE отдельно уже проверен (reports/vae), здесь обучается один раз – внутри первой смеси
+        popular, model = baselines.RecentPopularity(), vae.MultVAE(latent=400, beta=0.5)
+        run("hybrid_vae", [popular, *hybrid.grid(popular, model)], [])
+    elif command == "hybrid":
+        import content
+        import factorization
+        import hybrid
+        import knn
+
+        # подбор: популярные за год × (ALS | item-kNN) – лучшие настройки шага 4, умещающиеся в память сайта;
+        # новинки: свежие по году × контент (лучший на новинках на шаге 5); чистые модели – в том же прогоне
+        popular, als = baselines.RecentPopularity(), factorization.ALS(64, 0.1, 1.0)
+        item_knn, newest = knn.ItemKNN("cosine", 200, "binary"), content.Newest()
+        text = content.TfidfContent(words=True, weighting="centered")
+        pools = {
+            "candidates": [popular, als, item_knn, *hybrid.grid(popular, als), *hybrid.grid(popular, item_knn)],
+            "new": [newest, text, *hybrid.grid(newest, text, hybrid.NEW_WEIGHTS)],
+        }
+        # python evaluate.py hybrid new – только новинки (минуты вместо 20 минут кандидатов)
+        only = sys.argv[2:]
+        run("hybrid", {kind: models for kind, models in pools.items() if not only or kind in only}, [])
     else:
-        sys.exit("использование: python evaluate.py baselines|knn|factorization|ease|content|vae")
+        sys.exit("использование: python evaluate.py baselines|knn|factorization|ease|content|vae|hybrid|hybrid_vae")
 
 
 if __name__ == "__main__":

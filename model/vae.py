@@ -39,6 +39,30 @@ def _net(n_items: int, hidden: int, latent: int):
     return MultVAE()
 
 
+class Batches:
+    """Плотные пачки строк разреженной матрицы «люди × фильмы» прямо на устройстве: матрица (CSR) один раз
+    переносится на GPU, и пачка собирается там, а не на процессоре с копированием (на T4 процессор Colab
+    был узким местом: 25 с на эпоху при почти пустой видеокарте)."""
+
+    def __init__(self, matrix, device: str):
+        import torch
+
+        self.torch, self.device, self.n_items = torch, device, matrix.shape[1]
+        self.indptr = torch.from_numpy(matrix.indptr.astype(np.int64)).to(device)
+        self.indices = torch.from_numpy(matrix.indices.astype(np.int64)).to(device)
+
+    def __call__(self, rows: np.ndarray):
+        torch = self.torch
+        rows = torch.from_numpy(np.asarray(rows, dtype=np.int64)).to(self.device)
+        starts, lengths = self.indptr[rows], self.indptr[rows + 1] - self.indptr[rows]
+        owner = torch.repeat_interleave(torch.arange(len(rows), device=self.device), lengths)
+        offset = torch.arange(int(lengths.sum()), device=self.device) - torch.repeat_interleave(
+            torch.cumsum(lengths, 0) - lengths, lengths)
+        x = torch.zeros((len(rows), self.n_items), device=self.device)
+        x[owner, self.indices[torch.repeat_interleave(starts, lengths) + offset]] = 1.0
+        return x
+
+
 class MultVAE(Recommender):
     def __init__(self, latent: int = 200, beta: float = 0.2, hidden: int = 600, epochs: int = 40,
                  anneal_epochs: int = 20, lr: float = 1e-3, seed: int = 0):
@@ -53,7 +77,8 @@ class MultVAE(Recommender):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         torch.manual_seed(self.seed)
         rng = np.random.default_rng(self.seed)
-        matrix = interactions(history, pool)[0]
+        matrix = interactions(history, pool)[0].tocsr()
+        rows_of = Batches(matrix, self.device)
         self.net = _net(len(pool), self.hidden, self.latent).to(self.device)
         optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr)
         steps_per_epoch = -(-matrix.shape[0] // BATCH)
@@ -65,7 +90,7 @@ class MultVAE(Recommender):
             order = rng.permutation(matrix.shape[0])  # люди в новом порядке каждую эпоху
             for start in range(0, matrix.shape[0], BATCH):
                 rows = order[start: start + BATCH]
-                x = torch.from_numpy(matrix[rows].toarray().astype(np.float32)).to(self.device)
+                x = rows_of(rows)
                 logits, mu, logvar = self.net(x)
                 nll = -(torch.log_softmax(logits, dim=1) * x).sum(dim=1).mean()
                 kl = (-0.5 * (1 + logvar - mu ** 2 - logvar.exp()).sum(dim=1)).mean()
