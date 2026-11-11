@@ -208,8 +208,13 @@ def main() -> None:
         # те же модели на двух наборах: кандидаты (сравнение с шагом 4) и «новинки» (только контент и база)
         run("content", [baselines.RandomModel(), content.Newest(), baselines.RecentPopularity(), *content.grid()],
             [], pools=("candidates", "new"))
+    elif command == "vae":
+        import vae
+
+        # Mult-VAE – в Colab на GPU (notebooks/vae.ipynb); без GPU – только на маленьких данных
+        run("vae", [baselines.RecentPopularity(), *vae.vae_grid()], [])
     else:
-        sys.exit("использование: python evaluate.py baselines|knn|factorization|ease|content")
+        sys.exit("использование: python evaluate.py baselines|knn|factorization|ease|content|vae")
 
 
 if __name__ == "__main__":

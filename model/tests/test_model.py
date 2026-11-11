@@ -354,7 +354,7 @@ def test_e5_content_averages_languages(side, taste):
     model.fit(taste, np.arange(1, 8))
     assert len(asked) == 2 and asked[0][0].startswith("Film 1. Sci-Fi. space, robots. Astronauts")
     assert np.allclose(np.linalg.norm(model.matrix, axis=1), 1)
-    assert set(model.recommend(inputs(1), 2)) == {2, 3}
+    assert set(model.recommend(inputs(1, 7), 2)) == {2, 3}  # фильм 7 смотрят все – он во входе, не в ответе
     model.fit(taste, np.arange(1, 8))
     assert len(asked) == 2  # векторы считаются один раз на описание
 
@@ -385,3 +385,18 @@ def test_search_counts_hits_and_genre_precision(side):
     blind = search.run_search(side, {"blind": lambda texts: np.zeros((len(texts), 7))}, queries)
     first, second = blind["variants"]["blind"]["queries"]
     assert first["rank"] is None and first["top3"] == [] and second["precision"] == 0
+
+
+# --- Mult-VAE ---------------------------------------------------------------------------------------------------
+
+def test_vae_learns_companies_and_releases(taste):
+    import vae
+
+    knn._cache.clear()
+    model = vae.MultVAE(latent=2, beta=0.2, hidden=16, epochs=300, anneal_epochs=100).fit(taste, np.arange(1, 8))
+    assert model.losses[-1] < model.losses[0]  # обучение идёт
+    assert set(model.recommend(inputs(4, 7), 2)) == {5, 6}  # своя компания
+    assert set(model.recommend(inputs(1, 7), 2)) == {2, 3}  # фильм 7 смотрят все – он во входе, не в ответе
+    assert model.scores(inputs()).shape == (7,)  # пустой вход – тоже баллы
+    model.release()
+    assert not hasattr(model, "net")

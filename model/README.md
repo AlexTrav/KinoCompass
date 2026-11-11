@@ -11,7 +11,7 @@ make factorization          # ALS (8 настроек), BPR (4), SVD (4) -> repo
 make content                # контент: TF-IDF и e5 (8 вариантов) на кандидатах и «новинках» -> reports/content
 make search                 # поиск словами: 30 запросов (ru, kk, en), e5 и TF-IDF -> reports/search
 make figures                # рисунки по сохранённым отчётам -> figures/
-make test                   # pytest протокола, метрик и моделей (26 тестов)
+make test                   # pytest протокола, метрик и моделей (27 тестов)
 ```
 
 Каждый прогон, кроме сводного JSON, сохраняет NDCG@10 каждого человека (`<PERIOD>_users.csv.gz`) – по ним
@@ -26,6 +26,8 @@ make test                   # pytest протокола, метрик и мод�
 | `factorization.py` | матричная факторизация: ALS и BPR из implicit, SVD со смещениями (своё, ALS по явным оценкам) |
 | `ease.py` | EASE – линейная модель «фильм × фильм» в одну формулу; на всех кандидатах учится в Colab на GPU |
 | `content.py` | контентная модель: описание фильма (TF-IDF, e5), профиль человека; база «свежие по году» |
+| `vae.py` | Mult-VAE (Liang et al., 2018) на torch: обучение в Colab на GPU, без GPU – на процессоре (тесты) |
+| `notebooks/vae.ipynb` | ноутбук Colab: клонирует репозиторий и запускает `python evaluate.py vae`, итог – архив отчёта |
 | `search.py`, `search_queries.csv` | проверка поиска словами: 30 запросов на трёх языках и критерии попадания |
 | `notebooks/ease.ipynb` | ноутбук Colab: клонирует репозиторий и запускает `python evaluate.py ease`, итог – архив отчёта |
 | `evaluate.py` | прогон моделей по всем сценариям с отчётом; модели обучаются и проверяются по одной |
