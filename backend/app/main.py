@@ -44,7 +44,8 @@ app = FastAPI(title="KinoCompass API", version="1.0", lifespan=lifespan,
 # уровень 6 вместо 9: карта (0,4 МБ) сжимается втрое быстрее при почти том же размере
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
 app.add_middleware(CORSMiddleware,
-                   allow_origins=os.environ.get("CORS_ORIGINS", "https://alextrav.github.io,http://localhost:5173")
+                   allow_origins=os.environ.get("CORS_ORIGINS", "https://alextrav.github.io,http://localhost:5173,"
+                                                                "http://localhost:8080")
                    .split(","), allow_methods=["GET", "POST"], expose_headers=["Server-Timing"])
 
 
@@ -145,10 +146,12 @@ def films(request: Request, q: str = Query("", max_length=100), lang: Lang = "ru
 
 @app.post("/api/recommend")
 def recommend(request: Request, body: RecommendIn) -> dict:
-    """10 советов модели сайта «популярность × ALS»; оценённые фильмы не советуются."""
+    """10 советов модели сайта «популярность × ALS»; оценённые фильмы не советуются. У каждого – because:
+    оценённые фильмы с наибольшим вкладом в балл ALS (точное разложение) и их доля."""
     s = store(request)
     index, _, unknown = known(s, body)
-    return {"items": s.top(s.site(index, body.popularity_weight), body.k, body.lang, skip=index),
+    items = s.top(s.site(index, body.popularity_weight), body.k, body.lang, skip=index)
+    return {"items": s.explain(items, index, body.lang),
             "popularity_weight": body.popularity_weight, "tested_weight": core.SITE_WEIGHT, "unknown": unknown}
 
 

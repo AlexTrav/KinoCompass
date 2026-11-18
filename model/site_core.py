@@ -24,6 +24,15 @@ def fold_in(items: np.ndarray, gram: np.ndarray, regularization: float, alpha: f
     return np.linalg.solve(a, alpha * y.sum(axis=0))
 
 
+def contributions(items: np.ndarray, gram: np.ndarray, regularization: float, alpha: float, index: np.ndarray,
+                  targets: np.ndarray) -> np.ndarray:
+    """«Почему этот фильм»: вклад каждого оценённого фильма j в балл ALS фильма i – точное разложение,
+    c[i, j] = α · yᵢ · A⁻¹ · yⱼ, сумма по j равна items[i] @ fold_in(...). Строки – targets, столбцы – index."""
+    y = items[index].astype(np.float64)
+    a = gram + (alpha - 1) * y.T @ y + regularization * np.eye(len(gram))
+    return alpha * items[targets].astype(np.float64) @ np.linalg.solve(a, y.T)
+
+
 def site_scores(popularity_ranks: np.ndarray, items: np.ndarray, gram: np.ndarray, index: np.ndarray,
                 regularization: float = 0.1, alpha: float = 1.0, weight: float = SITE_WEIGHT) -> np.ndarray:
     """Баллы модели сайта: w · ранг популярности + (1 − w) · ранг ALS для человека с оценёнными фильмами index."""

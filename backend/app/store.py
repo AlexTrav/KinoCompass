@@ -113,6 +113,21 @@ class Store:
         """Модель сайта «популярность × ALS»; weight – вес популярности (ползунок новизны), 0 – чистый ALS."""
         return core.site_scores(self.pop_ranks, self.items, self.gram, index, self.regularization, self.alpha, weight)
 
+    def explain(self, cards: list[dict], index: np.ndarray, lang: str, top: int = 3) -> list[dict]:
+        """Добавить к советам «потому что понравились …»: оценённые фильмы с наибольшим положительным вкладом
+        в балл ALS и их доля среди положительных вкладов."""
+        if not cards:
+            return cards
+        targets = np.array([self.row[c["id"]] for c in cards], dtype=np.int64)
+        c = core.contributions(self.items, self.gram, self.regularization, self.alpha, index, targets)
+        for card, row in zip(cards, c):
+            positive = np.clip(row, 0, None)
+            total = positive.sum()
+            order = [j for j in np.argsort(-positive, kind="stable")[:top] if positive[j] > 0]
+            card["because"] = [{"id": int(self.ids[index[j]]), "title": self.title(int(index[j]), lang),
+                                "share": round(float(positive[j] / total), 3)} for j in order]
+        return cards
+
     def content(self, index: np.ndarray, values: np.ndarray, candidates: np.ndarray | None = None) -> np.ndarray:
         return core.content_scores(self.tfidf, index, values, candidates)
 

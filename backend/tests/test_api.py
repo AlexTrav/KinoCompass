@@ -49,6 +49,24 @@ def test_recommend_matches_site_core(client, store):
     assert ids(body["items"]) == [int(store.ids[i]) for i in np.argsort(-scores, kind="stable")[:6]]
 
 
+def test_explanation_is_exact_and_points_to_taste(client, store):
+    """Вклады оценённых фильмов в сумме дают балл ALS; совет-фантастику объясняет оценённая фантастика."""
+    index = np.array([store.row[1], store.row[2], store.row[4]])
+    targets = np.arange(len(store.ids))
+    c = core.contributions(store.items, store.gram, store.regularization, store.alpha, index, targets)
+    user = core.fold_in(store.items, store.gram, store.regularization, store.alpha, index)
+    assert np.allclose(c.sum(axis=1), store.items[targets].astype(np.float64) @ user)
+
+    ratings = [{"id": 1, "rating": 5}, {"id": 2, "rating": 4}, {"id": 4, "rating": 4}]
+    items = client.post("/api/recommend", json={"ratings": ratings, "popularity_weight": 0, "k": 5}).json()["items"]
+    space = next(f for f in items if f["id"] in (3, 7))
+    assert {b["id"] for b in space["because"][:2]} == {1, 2} and space["because"][0]["title"].startswith("Фильм")
+    love = next(f for f in items if f["id"] in (5, 6, 8))
+    assert love["because"][0]["id"] == 4
+    assert all(0 < b["share"] <= 1 for f in items for b in f["because"])
+    assert all(abs(sum(b["share"] for b in f["because"]) - 1) < 0.01 for f in items if len(f["because"]) == 3)
+
+
 def test_unknown_and_invalid_ratings(client):
     body = client.post("/api/recommend", json={"ratings": [*SPACE_FAN, {"id": 999, "rating": 4}]}).json()
     assert body["unknown"] == [999]
