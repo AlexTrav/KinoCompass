@@ -472,8 +472,8 @@
    "sha256": "4477d74a3b429519d5195ba6b2d5c2871f9efd05b2dfae64a9b523f29ee4bd3d"
   },
   "catalog.json.gz": {
-   "bytes": 1817246,
-   "sha256": "daa7462bf4ab8be4c7d33984966f33d8ed05535a9d89e77c3af40d93dd39d296"
+   "bytes": 1817226,
+   "sha256": "821297a5a2deaa9c088ec6cee51ab510abadb9e4e2fd287effc6df5949e64079"
   },
   "e5_enru.npy": {
    "bytes": 17932160,

@@ -170,6 +170,16 @@ def test_clean_label_replaces_em_dash():
     assert wikidata.clean_label(f"Я {chr(0x2014)} легенда") == "Я – легенда"
 
 
+def test_wrong_labels_are_dropped():
+    """Ошибочная метка Wikidata («Питер Джексон» вместо названия) обнуляется, остальные не трогаются."""
+    titles = pd.DataFrame({"movie_id": [7153, 1], "wikidata": ["Q131074", "Q171048"],
+                           "title_ru": ["Властелин колец: Возвращение короля", "История игрушек"],
+                           "title_kk": ["Питер Джексон", "Ойыншықтар хикаясы"], "title_en": ["x", "Toy Story"]})
+    out = wikidata.drop_wrong_labels(titles)
+    assert out["title_kk"].tolist() == ["", "Ойыншықтар хикаясы"]
+    assert out["title_ru"].iloc[0] == "Властелин колец: Возвращение короля"
+
+
 def test_update_titles_only_new_and_marks_not_found(tmp_path, monkeypatch):
     monkeypatch.setattr(wikidata.time, "sleep", lambda s: None)
     catalog = pd.DataFrame({"movie_id": [1, 2, 3], "imdb_id": ["tt0133093", "tt0114369", None]})

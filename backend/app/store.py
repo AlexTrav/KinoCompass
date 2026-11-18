@@ -178,7 +178,7 @@ class Store:
         """Карта не меняется: ответ (JSON, ≈ 0,4 МБ) собирается один раз на язык и дальше отдаётся готовым."""
         if lang not in self._maps:
             films = [{"id": int(self.ids[i]), "x": round(float(x), 4), "y": round(float(y), 4),
-                      "title": self.title(int(i), lang), "genre": (self.catalog[i]["genres"] or ["?"])[0]}
+                      "title": self.title(int(i), lang), "genres": self.catalog[i]["genres"]}
                      for i, (x, y) in zip(self.map_rows, self.map_xy)]
             self._maps[lang] = json.dumps({"films": films}, ensure_ascii=False).encode("utf-8")
         return self._maps[lang]

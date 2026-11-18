@@ -22,6 +22,21 @@ def clean_label(label: str) -> str:
     return NOTE_RE.sub("", label).strip().replace(EM_DASH, "–")
 
 
+# метки Wikidata, ошибочные по существу (найдены проверкой сайта 19.11.2026: все 708 казахских названий –
+# повторы у разных фильмов и «похожие на имя человека»); такая метка обнуляется, сайт показывает следующее
+# название по цепочке (русское)
+WRONG_LABELS = {
+    ("Q131074", "kk"): "«Питер Джексон» – режиссёр, а не название «Властелин колец: Возвращение короля»",
+    ("Q16997069", "kk"): "«Дивергент» – название первой части, а не «Инсургента»",
+}
+
+
+def drop_wrong_labels(titles: pd.DataFrame) -> pd.DataFrame:
+    for (qid, lang), _reason in WRONG_LABELS.items():
+        titles.loc[titles["wikidata"] == qid, f"title_{lang}"] = ""
+    return titles
+
+
 # SPARQL: элементы Wikidata с данными IMDb id (P345) и их метки на нужных языках; метки – OPTIONAL,
 # чтобы фильм без русского и казахского названия всё равно получил свой Q-номер
 def build_query(imdb_ids: list[str]) -> str:
@@ -98,4 +113,4 @@ def update_titles(catalog: pd.DataFrame, path, refresh: bool = False, fetch_batc
     titles = pd.concat(parts, ignore_index=True)
     for lang in LABEL_LANGS:  # и у ранее сохранённых: очистка не требует повторных запросов
         titles[f"title_{lang}"] = titles[f"title_{lang}"].map(clean_label)
-    return save(titles, path, catalog)
+    return save(drop_wrong_labels(titles), path, catalog)

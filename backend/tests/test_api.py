@@ -113,7 +113,8 @@ def test_compare_four_models(client):
 
 def test_taste_map_and_my_point(client):
     films = client.get("/api/map", params={"lang": "en"}).json()["films"]
-    assert [f["id"] for f in films] == [1, 2, 3, 4, 5, 6] and films[0]["genre"] == "Sci-Fi"
+    assert [f["id"] for f in films] == [1, 2, 3, 4, 5, 6] and films[0]["genres"] == ["Sci-Fi"]
+    assert films[3]["genres"] == ["Romance", "Drama"]  # все жанры: сайт красит точку по самому характерному
     me = client.post("/api/map/me", json={"ratings": [{"id": 1, "rating": 5}, {"id": 4, "rating": 1}]}).json()
     assert (me["x"], me["y"], me["used"]) == (-0.9, 0.1, 2)  # не понравившийся фильм не тянет
     off = client.post("/api/map/me", json={"ratings": [{"id": 7, "rating": 5}]}).json()
