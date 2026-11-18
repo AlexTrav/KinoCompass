@@ -475,6 +475,14 @@
    "bytes": 1817246,
    "sha256": "daa7462bf4ab8be4c7d33984966f33d8ed05535a9d89e77c3af40d93dd39d296"
   },
+  "e5_enru.npy": {
+   "bytes": 17932160,
+   "sha256": "a6e12842f33faf246ff96e7053be3344dd9181f7cf816dae4dee74c5febe85f7"
+  },
+  "e5_ids.npy": {
+   "bytes": 93524,
+   "sha256": "0767d04043d5331887a54c18515fa23f000754f84910ad98e6afa3a64a4cf41f"
+  },
   "e5_query.onnx": {
    "bytes": 118529849,
    "sha256": "90903f976eba700890d3ef58dcbe0cb809b9d14bed1feb0624e71f0bacff008a"
@@ -497,5 +505,5 @@
   }
  },
  "seconds": 138.4,
- "total_mb": 152.5
+ "total_mb": 169.7
 }
