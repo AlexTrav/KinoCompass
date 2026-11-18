@@ -14,3 +14,9 @@ pytest==9.2.0
 torch==2.15.0+cpu
 sentence-transformers==6.2.0
 scikit-learn==1.9.1
+# модель запросов e5 для сайта: экспорт в ONNX и сжатие до int8 (onnxruntime – и на сайте)
+onnx==1.23.2
+onnxscript==0.7.2
+onnxruntime==1.31.1
+# словарь e5 на сайте – sentencepiece (5 МБ в памяти вместо 250 МБ у tokenizers)
+sentencepiece==0.2.3

@@ -29,3 +29,7 @@ research/figures/
 
 # рисунки моделей собираются в папку отчёта (make -C model figures FIGURES=...)
 model/figures/
+
+# выгрузка моделей для сайта – большие файлы; в git только описание с размерами и контрольными суммами
+model/export/*
+!model/export/manifest.json

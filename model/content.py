@@ -56,7 +56,10 @@ def _e5():
     if not _model:
         from sentence_transformers import SentenceTransformer
 
-        _model.append(SentenceTransformer(E5_MODEL, device="cpu", cache_folder=str(CACHE / "hf")))
+        import torch
+
+        dev = "cuda" if torch.cuda.is_available() else "cpu"  # в Colab – GPU (векторы для сайта за минуты)
+        _model.append(SentenceTransformer(E5_MODEL, device=dev, cache_folder=str(CACHE / "hf")))
     return _model[0]
 
 

@@ -1,0 +1,36 @@
+"""Расчёты сайта на одном numpy – общие для выгрузки (export.py), её проверки (site_check.py) и бэкенда (шаг 7):
+никаких implicit, scikit-learn, torch и pandas в памяти сайта."""
+import numpy as np
+
+SITE_WEIGHT = 0.4  # вес популярности в смеси «популярность × ALS» (шаг 6в, подтверждён тестом)
+
+
+def ranks(scores: np.ndarray) -> np.ndarray:
+    """Ранг каждого балла от 0 (наименьший) до 1 (наибольший); при равенстве выше тот, кто раньше в списке –
+    как в hybrid.ranks, по которому смесь выбиралась и проверялась."""
+    out = np.empty(len(scores))
+    out[np.argsort(-scores, kind="stable")] = 1 - np.arange(len(scores)) / max(len(scores) - 1, 1)
+    return out
+
+
+def fold_in(items: np.ndarray, gram: np.ndarray, regularization: float, alpha: float,
+            index: np.ndarray) -> np.ndarray:
+    """Вектор нового человека в неявном ALS (Hu, Koren, Volinsky, 2008) при неизменных векторах фильмов:
+    (YᵀY + (c − 1)·YᵤᵀYᵤ + λI) x = c·Σ yᵢ, c = alpha – вес оценённого фильма (вход – только факт оценки)."""
+    y = items[index].astype(np.float64)
+    a = gram + (alpha - 1) * y.T @ y + regularization * np.eye(len(gram))
+    return np.linalg.solve(a, alpha * y.sum(axis=0))
+
+
+def site_scores(popularity_ranks: np.ndarray, items: np.ndarray, gram: np.ndarray, index: np.ndarray,
+                regularization: float = 0.1, alpha: float = 1.0, weight: float = SITE_WEIGHT) -> np.ndarray:
+    """Баллы модели сайта: w · ранг популярности + (1 − w) · ранг ALS для человека с оценёнными фильмами index."""
+    user = fold_in(items, gram, regularization, alpha, index)
+    return weight * popularity_ranks + (1 - weight) * ranks(items @ user)
+
+
+def encode_query(sp_model, text: str, max_tokens: int = 512) -> list[int]:
+    """Номера токенов e5 (XLM-R) через sentencepiece – без tokenizers (его словарь на 250 тыс. в памяти – 250 МБ).
+    Как XLMRobertaTokenizer: номер sentencepiece + 1, неизвестный (0) – 3; по краям <s> = 0 и </s> = 2."""
+    ids = [piece + 1 if piece else 3 for piece in sp_model.encode(text)][: max_tokens - 2]
+    return [0, *ids, 2]

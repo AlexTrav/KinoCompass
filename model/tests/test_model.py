@@ -476,3 +476,41 @@ def test_ease_solvers_agree():
         direct = ease.solve(g, 50.0, None)
         assert np.allclose(ease.solve_cpu(g.astype(np.float64), 50.0, cols), direct, atol=1e-6)
         assert np.allclose(ease.solve(g, 50.0, "cpu", cols).numpy(), direct, atol=1e-6)
+
+
+def test_export_fold_in_matches_implicit(taste):
+    """Вектор нового человека на сайте (numpy, без implicit) – тот же, что recalculate_user у implicit."""
+    import site_core
+
+    knn._cache.clear()
+    pool = np.arange(1, 8)
+    als = factorization.ALS(factors=4, regularization=0.1, iterations=10).fit(taste, pool)
+    items = np.asarray(als.model.item_factors, dtype=np.float64)
+    for movies in ((4, 7), (1, 2, 3), (5,)):
+        index = np.searchsorted(pool, movies)
+        mine = site_core.fold_in(items, items.T @ items, 0.1, 1.0, index)
+        theirs = als.user_vector(inputs(*movies))
+        cosine = mine @ theirs / np.linalg.norm(mine) / np.linalg.norm(theirs)
+        assert cosine > 0.999 and np.allclose(np.linalg.norm(mine), np.linalg.norm(theirs), rtol=0.01)
+
+
+def test_encode_query_matches_e5_tokenizer():
+    """Номера токенов сайта (sentencepiece, 5 МБ) – те же, что у токенизатора e5 (250 МБ в памяти). Нужна модель
+    e5 в кэше (том kinocompass-cache); без неё тест пропускается."""
+    import glob
+
+    import site_core
+
+    spm = glob.glob("/cache/hf/models--intfloat--multilingual-e5-small/snapshots/*/sentencepiece.bpe.model")
+    if not spm:
+        pytest.skip("нет модели e5 в кэше")
+    import sentencepiece
+    from transformers import AutoTokenizer
+
+    model = sentencepiece.SentencePieceProcessor(model_file=spm[0])
+    tokenizer = AutoTokenizer.from_pretrained(spm[0].rsplit("/", 1)[0])
+    texts = ["query: игрушки оживают, когда хозяина нет дома", "query: ойыншықтар тірілетін мультфильм",
+             "query: a hacker discovers reality is a simulation", "query: Amélie – café, naïve, Ñandú 2001!",
+             "query: соғыс туралы фильм", "query: 映画 アニメ", "query: zombie apocalypse 28 Days Later", "query: "]
+    for text in texts:
+        assert site_core.encode_query(model, text) == tokenizer(text)["input_ids"], text
