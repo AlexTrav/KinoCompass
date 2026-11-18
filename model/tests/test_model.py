@@ -342,6 +342,22 @@ def test_content_centered_weights_push_disliked_down(side, taste):
     assert model.scores(same)[2] > 0  # одинаковые оценки – без «минусов», вес 1
 
 
+def test_site_content_scores_match_content_model(side, taste):
+    """Новинки на сайте (site_core, без scikit-learn и pandas) – те же баллы, что у контентной модели проверки."""
+    import site_core
+
+    model = content.TfidfContent(words=True, weighting="centered")
+    model.attach(side)
+    model.fit(taste, side.index.to_numpy())
+    for liked in (pd.DataFrame({"movie_id": [1, 4], "rating": [5.0, 2.0]}),
+                  pd.DataFrame({"movie_id": [5], "rating": [4.0]})):
+        index = side.index.get_indexer(liked["movie_id"])
+        mine = site_core.content_scores(model.matrix, index, liked["rating"].to_numpy())
+        assert np.allclose(mine, model.scores(liked))
+        part = np.array([6, 2, 0])
+        assert np.allclose(site_core.content_scores(model.matrix, index, liked["rating"].to_numpy(), part), mine[part])
+
+
 def test_e5_content_averages_languages(side, taste):
     asked = []
 

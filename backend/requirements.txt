@@ -1,0 +1,12 @@
+# API (те же версии, что в SmogCast на Render)
+fastapi==0.162.0
+uvicorn==0.54.0
+# расчёты сайта (model/site_core.py) и выгрузка модели – те же версии, что в образе model
+numpy==2.5.4
+scipy==1.18.1
+# поиск словами: модель запросов e5 в ONNX int8 и её словарь
+onnxruntime==1.31.1
+sentencepiece==0.2.3
+# тесты API (make test)
+pytest==9.2.0
+httpx2==2.16.0

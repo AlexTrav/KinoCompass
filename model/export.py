@@ -152,6 +152,36 @@ def e5_vectors() -> None:
     print(f"векторы e5: {len(side)} фильмов за {time.time() - started:.0f} с")
 
 
+MAP_FILMS = 5000  # карта вкусов: столько самых оценённых фильмов каталога
+
+
+def taste_map() -> None:
+    """python export.py map – карта вкусов: t-SNE (scikit-learn) по векторам фильмов ALS, нормированным по длине
+    (сходство – косинус, как «похожие вкусы»), для MAP_FILMS самых оценённых фильмов -> map.npz (id и x, y в
+    [−1, 1]). Проверка: у скольких из 10 ближайших соседей на карте есть общий жанр – против случайных пар."""
+    from sklearn.manifold import TSNE
+    from sklearn.neighbors import NearestNeighbors
+
+    started = time.time()
+    catalog = json.load(gzip.open(OUT / "catalog.json.gz", "rt", encoding="utf-8"))
+    items = np.load(OUT / "als_items.npy").astype(np.float64)
+    rows = np.argsort([-c["n_ratings"] for c in catalog], kind="stable")[:MAP_FILMS]
+    vectors = items[rows] / np.linalg.norm(items[rows], axis=1, keepdims=True)
+    xy = TSNE(n_components=2, perplexity=30, init="pca", metric="cosine", random_state=0).fit_transform(vectors)
+    xy = (xy - xy.mean(axis=0)) / np.abs(xy - xy.mean(axis=0)).max()
+    ids = np.array([catalog[r]["id"] for r in rows], dtype=np.int32)
+    np.savez_compressed(OUT / "map.npz", ids=ids, xy=xy.astype(np.float32))
+
+    genres = [set(catalog[r]["genres"]) - {"(no genres listed)"} for r in rows]
+    _, near = NearestNeighbors(n_neighbors=11).fit(xy).kneighbors(xy)
+    share = np.mean([[bool(genres[i] & genres[j]) for j in near[i, 1:]] for i in range(len(rows))])
+    rng = np.random.default_rng(0)
+    pairs = rng.integers(0, len(rows), size=(20000, 2))
+    chance = np.mean([bool(genres[a] & genres[b]) for a, b in pairs if a != b])
+    print(f"карта: {len(rows)} фильмов за {time.time() - started:.0f} с; общий жанр у соседей на карте "
+          f"{share:.1%}, у случайных пар {chance:.1%}")
+
+
 QUERY_CHECK = ["игрушки оживают, когда хозяина нет дома", "ойыншықтар тірілетін мультфильм",
                "a hacker discovers reality is a simulation", "страшный фильм про призраков в доме",
                "romantic comedy in New York", "соғыс туралы фильм"]
@@ -217,5 +247,5 @@ def onnx_query_model() -> None:
 if __name__ == "__main__":
     import sys
 
-    commands = {"e5": e5_vectors, "onnx": onnx_query_model, "manifest": refresh_manifest}
+    commands = {"e5": e5_vectors, "onnx": onnx_query_model, "manifest": refresh_manifest, "map": taste_map}
     commands.get(sys.argv[1] if len(sys.argv) > 1 else "", main)()

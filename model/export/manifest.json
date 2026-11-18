@@ -491,6 +491,10 @@
    "bytes": 5069051,
    "sha256": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865"
   },
+  "map.npz": {
+   "bytes": 50990,
+   "sha256": "5dd62b2aff5bf6897a62d0dec8d17903876979443e38108760f266393934c502"
+  },
   "overviews.db": {
    "bytes": 24735744,
    "sha256": "8535b1e3eafba7389138317944fd7ae236df6a7289c3c7f4a95651b2e1e93aba"

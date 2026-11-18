@@ -1,0 +1,12 @@
+# контекст сборки образа API (backend/Dockerfile) – корень репозитория; в образ идёт только перечисленное ниже,
+# секреты (.env), данные и выгрузка моделей (она скачивается из релиза GitHub) – никогда
+*
+!backend/requirements.txt
+!backend/fetch_export.py
+!backend/app/**
+!backend/tests/**
+!backend/load_check.py
+!model/site_core.py
+!model/export/manifest.json
+**/__pycache__
+**/.pytest_cache

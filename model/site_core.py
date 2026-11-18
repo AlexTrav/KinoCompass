@@ -1,5 +1,7 @@
 """Расчёты сайта на одном numpy – общие для выгрузки (export.py), её проверки (site_check.py) и бэкенда (шаг 7):
 никаких implicit, scikit-learn, torch и pandas в памяти сайта."""
+import re
+
 import numpy as np
 
 SITE_WEIGHT = 0.4  # вес популярности в смеси «популярность × ALS» (шаг 6в, подтверждён тестом)
@@ -27,6 +29,52 @@ def site_scores(popularity_ranks: np.ndarray, items: np.ndarray, gram: np.ndarra
     """Баллы модели сайта: w · ранг популярности + (1 − w) · ранг ALS для человека с оценёнными фильмами index."""
     user = fold_in(items, gram, regularization, alpha, index)
     return weight * popularity_ranks + (1 - weight) * ranks(items @ user)
+
+
+def centered(ratings: np.ndarray) -> np.ndarray:
+    """Вес оценённого фильма в контентной модели: оценка минус средняя оценка человека (как content.Content,
+    weighting="centered"); все оценки одинаковые – «минусов» нет, у каждого фильма вес 1."""
+    w = np.asarray(ratings, dtype=np.float64) - float(np.mean(ratings))
+    return np.ones(len(w)) if np.allclose(w, 0) else w
+
+
+def content_scores(tfidf, index: np.ndarray, ratings: np.ndarray, candidates: np.ndarray | None = None) -> np.ndarray:
+    """Баллы контентной модели (TF-IDF, вес centered): сходство вектора фильма с профилем человека – суммой
+    векторов оценённых фильмов с весами centered. candidates – строки, которым нужен балл (None – все)."""
+    profile = tfidf[index].T @ centered(ratings)
+    target = tfidf if candidates is None else tfidf[candidates]
+    return np.asarray(target @ profile).ravel()
+
+
+SEARCH_POOL = 50  # поиск: известность переставляет только первые SEARCH_POOL фильмов по смыслу (e5)
+SEARCH_WEIGHT = 0.1  # вес известности (число оценок): на 30 запросах (search_site.py) – единственный не хуже e5
+
+
+def search_scores(cosine: np.ndarray, popularity_ranks: np.ndarray, weight: float,
+                  pool: int = SEARCH_POOL) -> np.ndarray:
+    """Баллы поиска: первые pool фильмов по косинусу e5 переставляются смесью рангов внутри них –
+    (1 − w) · ранг по смыслу + w · ранг популярности; остальные – −inf. weight = 0 – чистый e5."""
+    top = np.argsort(-cosine, kind="stable")[:pool]
+    out = np.full(len(cosine), -np.inf)
+    out[top] = (1 - weight) * ranks(cosine[top]) + weight * ranks(popularity_ranks[top])
+    return out
+
+
+def normalize_title(text: str) -> str:
+    """Название для сравнения с запросом: строчные, ё = е, без года «(1995)» и знаков препинания."""
+    text = re.sub(r"\(\d{4}\)", " ", text.lower().replace("ё", "е"))
+    return " ".join(re.findall(r"\w+", text))
+
+
+def map_point(xy: np.ndarray, ratings: np.ndarray) -> np.ndarray | None:
+    """Точка человека на карте вкусов – центр его фильмов с весом «насколько понравился»: max(оценка − 2,5; 0);
+    если ни один не понравился – простой центр. xy – координаты оценённых фильмов, которые есть на карте."""
+    if not len(xy):
+        return None
+    w = np.maximum(np.asarray(ratings, dtype=np.float64) - 2.5, 0)
+    if w.sum() == 0:
+        w = np.ones(len(xy))
+    return w @ xy / w.sum()
 
 
 def encode_query(sp_model, text: str, max_tokens: int = 512) -> list[int]:
