@@ -66,7 +66,8 @@ export interface MapFilm {
   x: number
   y: number
   title: string
-  genres: string[]
+  genres?: string[]
+  genre?: string // прежний формат API (один первый жанр) – пока Render не обновился, сайт не должен падать
 }
 
 export interface MapMe {

@@ -41,7 +41,7 @@ watch(() => JSON.stringify(payload.value), loadMe, { immediate: true })
 const groups = computed(() => {
   const out: Record<string, [number, number, number, string][]> = {}
   for (const f of films.value) {
-    const d = mainDirection(f.genres) ?? 'other'
+    const d = mainDirection(f.genres ?? (f.genre ? [f.genre] : [])) ?? 'other'
     ;(out[d] ??= []).push([f.x, f.y, f.id, f.title])
   }
   return out
