@@ -26,8 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: data } }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.12', cache: pip, cache-dependency-path: data/requirements.txt }
       - run: pip install -r requirements.txt
       - run: python -m pytest -q -p no:cacheprovider tests
@@ -39,8 +39,8 @@ jobs:
     env:
       PYTHONPATH: ${{ github.workspace }}/data
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.12', cache: pip, cache-dependency-path: research/requirements.txt }
       - run: pip install -r requirements.txt
       - run: python -m pytest -q -p no:cacheprovider tests
@@ -53,8 +53,8 @@ jobs:
     env:
       PYTHONPATH: ${{ github.workspace }}/data:${{ github.workspace }}/research
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.12', cache: pip, cache-dependency-path: model/requirements.txt }
       # libgomp – OpenMP для потоков implicit (как в Dockerfile модели)
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgomp1
@@ -69,8 +69,8 @@ jobs:
       # как в образе API: пакет app и model/site_core.py рядом
       PYTHONPATH: ${{ github.workspace }}/backend:${{ github.workspace }}/model
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.12', cache: pip, cache-dependency-path: backend/requirements.txt }
       - run: pip install -r requirements.txt
       - run: python -m pytest -q -p no:cacheprovider tests
@@ -80,8 +80,8 @@ jobs:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: frontend } }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: 24, cache: npm, cache-dependency-path: frontend/package-lock.json }
       - run: npm ci --no-audit --no-fund
       - run: npm test
@@ -92,8 +92,8 @@ jobs:
     name: чистота – без длинного тире и секретов
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.12' }
       - run: python .github/scripts/hygiene.py
 
@@ -101,8 +101,8 @@ jobs:
     name: выгрузка – релиз совпадает с manifest.json
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.12' }
       # адрес релиза – тот же, что в backend/Dockerfile (ARG EXPORT_URL)
       - run: |
