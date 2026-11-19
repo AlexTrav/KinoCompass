@@ -139,8 +139,9 @@ def health(request: Request) -> dict:
 
 @app.get("/api/films")
 def films(request: Request, q: str = Query("", max_length=100), lang: Lang = "ru",
-          k: int = Query(20, ge=1, le=50)) -> dict:
-    """Подсказки по названию (на любом из трёх языков); пустой запрос – популярное за последний год."""
+          k: int = Query(20, ge=1, le=100)) -> dict:
+    """Подсказки по названию (на любом из трёх языков); пустой запрос – популярное за последний год.
+    До 100 фильмов – для кнопки «Показать ещё» в блоке «Оцените фильмы»."""
     return {"items": store(request).suggest(q, k, lang)}
 
 

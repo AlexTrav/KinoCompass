@@ -24,6 +24,12 @@ def test_films_suggest_by_title_in_any_language(client):
     assert ids(many) == list(range(1, 9))  # начало названия, самые оценённые выше
 
 
+def test_films_show_more_limit(client):
+    # «Показать ещё» в блоке «Оцените фильмы» просит до 96 фильмов: 100 разрешено, больше – нет
+    assert client.get("/api/films", params={"k": 100}).status_code == 200
+    assert client.get("/api/films", params={"k": 101}).status_code == 422
+
+
 def test_titles_follow_language_chain(client):
     six = client.get("/api/film/6", params={"lang": "ru"}).json()
     assert six["title"] == "Film 6"  # русского нет – английское

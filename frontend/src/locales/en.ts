@@ -208,6 +208,7 @@ export default {
   common: {
     loading: 'Loading…',
     year: 'year',
+    more: 'Show more',
   },
   hint: {
     compass: 'Each rating pulls the needle toward the film’s genres: 4–5 stars strongly, 1–2 push away. Rare genres weigh more: every second film is a drama, only every ninth is horror. The filled shape shows the strength of all directions at once.',
