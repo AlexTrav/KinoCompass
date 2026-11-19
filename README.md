@@ -1,5 +1,6 @@
 # KinoCompass
 
+[![CI](https://github.com/AlexTrav/KinoCompass/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexTrav/KinoCompass/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Рубежное задание РК-2 по курсу «Искусственный интеллект и машинное обучение»: рекомендательная
@@ -67,6 +68,25 @@ make -C frontend test # тесты сайта; make -C frontend run – сайт
 Для постеров и описаний нужен ключ TMDb: `TMDB_TOKEN=<Ключ доступа к API>` в файле `.env` в корне проекта
 (в git не попадает).
 
+## Проверки и выкладка
+
+[.github/workflows/ci.yml](.github/workflows/ci.yml) – при каждом пуше и пул-реквесте в main, задачи параллельно:
+
+| Задача | Что проверяет |
+|---|---|
+| data | сбор и проверка данных – 48 тестов без сети |
+| research | расчёты исследования |
+| model | протокол, метрики и модели – 35 тестов на маленьких данных |
+| backend | API на искусственной выгрузке – 14 тестов |
+| frontend | 18 тестов, проверка типов (vue-tsc) и сборка |
+| чистота | во всех файлах под git – ни длинного тире, ни секретов (токены GitHub, JWT, `TMDB_TOKEN=` со значением) – [hygiene.py](.github/scripts/hygiene.py) |
+| выгрузка | каждый файл из `model/export/manifest.json` есть в релизе того же размера – иначе Render не соберётся |
+
+Выкладка – только после зелёного CI: сайт на GitHub Pages ([pages.yml](.github/workflows/pages.yml) собирает
+проверенный коммит), сервер на Render – Auto-Deploy «After CI Checks Pass». После деплоя Render стоит проверить
+версию запросом (например, `/api/film/7153?lang=kk` – русское название): 19.11.2026 сервис при статусе «Live»
+отдавал прежнюю сборку, помогло Manual Deploy → Clear build cache & deploy.
+
 ## Структура
 
 ```
@@ -76,6 +96,7 @@ KinoCompass/
   model/     – протокол проверки, метрики, модели, отчёты с результатами (reports/ – в git)
   backend/   – API сайта на FastAPI (Render): выгрузка модели в памяти, расчёты – model/site_core.py
   frontend/  – сайт на Vue (GitHub Pages): страницы, переводы, графики
+  .github/   – CI (тесты, чистота, сверка выгрузки) и выкладка сайта на Pages
   Makefile   – общие команды
 ```
 

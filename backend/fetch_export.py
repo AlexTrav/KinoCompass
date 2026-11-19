@@ -1,9 +1,11 @@
 """Скачать выгрузку модели (model/export) из релиза GitHub при сборке образа и сверить каждый файл с manifest.json.
 
-    python fetch_export.py <адрес релиза> <папка>   # адрес – .../releases/download/<тег>
+    python fetch_export.py <адрес релиза> <папка>           # адрес – .../releases/download/<тег>
+    python fetch_export.py <адрес релиза> <папка> --check   # CI: только размеры, без скачивания
 
 Файл с другой контрольной суммой или размером – ошибка сборки: лучше не выложить сервер, чем выложить его с
-чужой или испорченной моделью."""
+чужой или испорченной моделью. Режим --check (задача CI «выгрузка») спрашивает у релиза только размер каждого
+файла из manifest.json: если файла нет или он другой, Render при сборке упал бы – CI скажет это раньше."""
 import hashlib
 import json
 import sys
@@ -30,9 +32,31 @@ def download(url: str, path: Path, size: int, digest: str) -> None:
     sys.exit(f"{path.name}: не удалось скачать без ошибок за {TRIES} попытки")
 
 
-def main(base: str, folder: str) -> None:
+def check(base: str, files: dict) -> None:
+    """Каждый файл манифеста есть в релизе и того же размера (HEAD с переходом по перенаправлению GitHub)."""
+    bad = []
+    for name, info in files.items():
+        try:
+            request = urllib.request.Request(f"{base.rstrip('/')}/{name}", method="HEAD")
+            with urllib.request.urlopen(request, timeout=60) as response:
+                size = int(response.headers.get("Content-Length", -1))
+        except OSError as error:
+            bad.append(f"{name}: {error}")
+            continue
+        if size != info["bytes"]:
+            bad.append(f"{name}: в релизе {size} байт, в манифесте {info['bytes']}")
+        else:
+            print(f"{name}: {size} байт – совпадает", flush=True)
+    if bad:
+        sys.exit("релиз не совпадает с manifest.json:\n" + "\n".join(bad))
+    print(f"релиз совпадает с манифестом: {len(files)} файлов")
+
+
+def main(base: str, folder: str, mode: str = "") -> None:
     out = Path(folder)
     files = json.loads((out / "manifest.json").read_text(encoding="utf-8"))["files"]
+    if mode == "--check":
+        return check(base, files)
     started = time.time()
     for name, info in files.items():
         download(f"{base.rstrip('/')}/{name}", out / name, info["bytes"], info["sha256"])
@@ -41,4 +65,4 @@ def main(base: str, folder: str) -> None:
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:3])
+    main(*sys.argv[1:4])

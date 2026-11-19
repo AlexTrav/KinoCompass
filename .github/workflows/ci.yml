@@ -1,0 +1,110 @@
+# CI: при каждом пуше и пул-реквесте в main – тесты всех частей проекта, чистота репозитория и сверка выгрузки
+# модели с релизом. Версии пакетов – те же requirements.txt, что в Docker-образах (локально всё идёт в Docker,
+# здесь – напрямую на раннере с кэшем pip). Сайт на Pages (pages.yml) и сервер на Render («After CI Checks
+# Pass») выкладываются только после зелёного CI.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONDONTWRITEBYTECODE: 1
+  MPLCONFIGDIR: /tmp/mpl
+  OPENBLAS_NUM_THREADS: 1
+
+jobs:
+  data:
+    name: data – сбор и проверка данных
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: data } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: pip, cache-dependency-path: data/requirements.txt }
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q -p no:cacheprovider tests
+
+  research:
+    name: research – расчёты исследования
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: research } }
+    env:
+      PYTHONPATH: ${{ github.workspace }}/data
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: pip, cache-dependency-path: research/requirements.txt }
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q -p no:cacheprovider tests
+
+  model:
+    name: model – протокол, метрики, модели
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults: { run: { working-directory: model } }
+    env:
+      PYTHONPATH: ${{ github.workspace }}/data:${{ github.workspace }}/research
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: pip, cache-dependency-path: model/requirements.txt }
+      # libgomp – OpenMP для потоков implicit (как в Dockerfile модели)
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgomp1
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q -p no:cacheprovider tests
+
+  backend:
+    name: backend – API на искусственной выгрузке
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: backend } }
+    env:
+      # как в образе API: пакет app и model/site_core.py рядом
+      PYTHONPATH: ${{ github.workspace }}/backend:${{ github.workspace }}/model
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: pip, cache-dependency-path: backend/requirements.txt }
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q -p no:cacheprovider tests
+
+  frontend:
+    name: frontend – тесты, типы, сборка
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      # проверка типов (vue-tsc) и сборка Vite – как для Pages
+      - run: npm run build -- --base=/KinoCompass/
+
+  hygiene:
+    name: чистота – без длинного тире и секретов
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python .github/scripts/hygiene.py
+
+  export:
+    name: выгрузка – релиз совпадает с manifest.json
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      # адрес релиза – тот же, что в backend/Dockerfile (ARG EXPORT_URL)
+      - run: |
+          url=$(sed -n 's/^ARG EXPORT_URL=//p' backend/Dockerfile)
+          python backend/fetch_export.py "$url" model/export --check

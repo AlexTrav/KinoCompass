@@ -37,8 +37,9 @@ make -C frontend run API=http://localhost:8000   # вместе с make -C backe
 make -C frontend dev    # dev-сервер Vite на http://localhost:5173
 ```
 
-Всё – в Docker, локальный `node_modules` не нужен. Выкладка – [.github/workflows/pages.yml](../.github/workflows/pages.yml):
-при изменении `frontend/` в main – тесты, сборка с адресом `/KinoCompass/` и GitHub Pages.
+Всё – в Docker, локальный `node_modules` не нужен. Тесты, проверка типов и сборка идут в CI
+([ci.yml](../.github/workflows/ci.yml)); выкладка – [pages.yml](../.github/workflows/pages.yml): после зелёного CI
+на main – сборка того же коммита с адресом `/KinoCompass/` и GitHub Pages.
 
 Графики ECharts грузятся отдельным куском (≈ 205 КБ сжатыми) только на страницах с графиками; основной
 кусок – ≈ 39 КБ. Высоту графику задаёт обёртка: собственный стиль vue-echarts (`height: 100%`) сильнее классов
