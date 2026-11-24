@@ -1,4 +1,21 @@
+import { BLIND_KEY, loadTally, saveTally, shuffle } from './blind'
 import { angleOf, directionsOf, mainDirection, needle } from './compass'
+
+describe('слепой тест моделей', () => {
+  it('перемешивание – та же четвёрка в другом порядке, исходный список не меняется', () => {
+    const models = ['popular', 'als', 'content', 'hybrid'] as const
+    expect(shuffle(models, () => 0)).toEqual(['als', 'content', 'hybrid', 'popular'])
+    expect([...shuffle(models)].sort()).toEqual([...models].sort())
+    expect(models[3]).toBe('hybrid')
+  })
+
+  it('счёт выборов сохраняется в браузере, испорченная запись – с нуля', () => {
+    saveTally({ tries: 3, site: 2 })
+    expect(loadTally()).toEqual({ tries: 3, site: 2 })
+    localStorage.setItem(BLIND_KEY, '{"tries": 1, "site": 5}')
+    expect(loadTally()).toEqual({ tries: 0, site: 0 })
+  })
+})
 import { directionCounts, restShare, splitInfluence } from './explain'
 import { formatNumber, formatPercent, posterUrl } from './format'
 import { decodeRatings, encodeRatings, shareUrl } from './share'

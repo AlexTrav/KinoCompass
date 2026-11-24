@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Award, Timer } from 'lucide-vue-next'
+import { Award, Eye, EyeOff, Timer } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import VChart from 'vue-echarts'
 import { useI18n } from 'vue-i18n'
@@ -9,6 +9,7 @@ import HintTip from '../components/HintTip.vue'
 import { useRatings } from '../composables/useRatings'
 import site from '../data/site.json'
 import type { AppLocale, Compare, ModelKey } from '../types'
+import { loadTally, saveTally, shuffle } from '../utils/blind'
 import { formatNumber, formatPercent, posterUrl } from '../utils/format'
 
 const METRIC = 'NDCG@10'
@@ -39,6 +40,46 @@ async function loadLive() {
 }
 watch([() => JSON.stringify(payload.value), lang], loadLive, { immediate: true })
 const siteIds = computed(() => new Set(live.value?.models.hybrid.items.map((f) => f.id) ?? []))
+
+// ---------- слепой тест: те же четыре списка без названий, времени и отметок, в случайном порядке ----------
+const LETTERS = ['A', 'B', 'C', 'D']
+const blind = ref(false)
+const order = ref<ModelKey[]>([...LIVE])
+const picked = ref<ModelKey | null>(null)
+const tally = ref(loadTally())
+const hidden = computed(() => blind.value && picked.value === null) // всё, что выдаёт модель, спрятано до выбора
+const shown = computed(() => (blind.value ? order.value : LIVE))
+
+function startBlind() {
+  order.value = shuffle(LIVE)
+  picked.value = null
+  blind.value = true
+}
+
+function pick(key: ModelKey) {
+  picked.value = key
+  tally.value = { tries: tally.value.tries + 1, site: tally.value.site + (key === 'hybrid' ? 1 : 0) }
+  saveTally(tally.value)
+}
+
+// новые оценки – новые списки: начатый тест начинается заново
+watch(
+  () => JSON.stringify(payload.value),
+  () => blind.value && startBlind(),
+)
+
+const cold5 = (key: ModelKey) => site.models.find((m) => m.key === key)?.scenarios.cold5.ndcg ?? null
+const verdict = computed(() => {
+  if (!picked.value) return ''
+  const model = t(`models.${picked.value}`)
+  if (picked.value === 'hybrid') return t('compare.blind.site', { model })
+  return t('compare.blind.other', {
+    model,
+    letter: LETTERS[order.value.indexOf('hybrid')],
+    site: fmt(cold5('hybrid')),
+    picked: fmt(cold5(picked.value)),
+  })
+})
 
 // ---------- итоговый тест: валидация и тест рядом, лучшие сверху ----------
 const models = computed(() => [...site.models].sort((a, b) => (a.test ?? 0) - (b.test ?? 0)))
@@ -108,7 +149,21 @@ const best = computed(() => {
 
     <!-- вживую -->
     <section class="space-y-4">
-      <h2 class="flex items-center gap-2 text-2xl font-semibold">{{ t('compare.live') }} <HintTip :text="t('hint.live')" /></h2>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="flex items-center gap-2 text-2xl font-semibold">{{ t('compare.live') }} <HintTip :text="t('hint.live')" /></h2>
+        <button
+          v-if="payload.length && live"
+          type="button"
+          class="flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-sm transition"
+          :class="blind ? 'border-accent text-accent' : 'border-line hover:border-accent hover:text-accent'"
+          @click="blind ? (blind = false) : startBlind()"
+        >
+          <Eye v-if="blind" class="h-4 w-4" />
+          <EyeOff v-else class="h-4 w-4" />
+          {{ blind ? t('compare.blind.exit') : t('compare.blind.start') }}
+        </button>
+      </div>
+      <p v-if="hidden" class="max-w-3xl text-sm text-muted">{{ t('compare.blind.hint') }}</p>
       <div v-if="!payload.length" class="rounded-xl border border-dashed border-line p-6 text-center text-muted">
         {{ t('compare.noRatings') }}
         <RouterLink to="/" class="ml-2 text-accent underline">{{ t('compare.goPick') }}</RouterLink>
@@ -116,31 +171,53 @@ const best = computed(() => {
       <p v-else-if="liveState === 'error'" class="text-muted">{{ t('rec.error') }}</p>
       <div v-else-if="live" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" :class="{ 'opacity-60': liveState === 'loading' }">
         <div
-          v-for="key in LIVE"
+          v-for="(key, n) in shown"
           :key="key"
-          class="min-w-0 rounded-2xl border bg-surface p-4"
-          :class="key === 'hybrid' ? 'border-accent shadow-[0_0_30px_var(--glow)]' : 'border-line'"
+          class="flex min-w-0 flex-col rounded-2xl border bg-surface p-4"
+          :class="[
+            !hidden && key === 'hybrid' ? 'border-accent shadow-[0_0_30px_var(--glow)]' : 'border-line',
+            blind && picked === key ? 'ring-2 ring-accent ring-offset-2 ring-offset-bg' : '',
+          ]"
         >
           <!-- min-w-0: карточке в сетке разрешено сжиматься, длинные названия обрезаются многоточием -->
           <div class="mb-3 flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
             <h3 class="font-semibold leading-tight">
-              {{ t(`models.${key}`) }}
-              <span v-if="key === 'hybrid'" class="ml-1 rounded bg-accent px-1.5 py-0.5 text-[11px] font-medium text-accent-ink">{{ t('compare.siteModel') }}</span>
+              <template v-if="blind">
+                {{ t('compare.blind.list', { letter: LETTERS[n] }) }}
+                <span v-if="!hidden" class="mt-0.5 block text-sm font-normal text-muted">{{ t(`models.${key}`) }}</span>
+              </template>
+              <template v-else>{{ t(`models.${key}`) }}</template>
+              <span v-if="!hidden && key === 'hybrid'" class="ml-1 rounded bg-accent px-1.5 py-0.5 text-[11px] font-medium text-accent-ink">{{ t('compare.siteModel') }}</span>
             </h3>
-            <span class="tabular flex shrink-0 items-center gap-1 text-xs text-muted"><Timer class="h-3.5 w-3.5" />{{ t('compare.ms', { n: fmt(live.models[key].ms, 1) }) }}</span>
+            <span v-if="!hidden" class="tabular flex shrink-0 items-center gap-1 text-xs text-muted"><Timer class="h-3.5 w-3.5" />{{ t('compare.ms', { n: fmt(live.models[key].ms, 1) }) }}</span>
           </div>
-          <ol class="space-y-2">
+          <!-- flex-1: кнопки «Этот лучше» в карточках разной высоты стоят на одной линии -->
+          <ol class="flex-1 space-y-2">
             <li v-for="(f, i) in live.models[key].items" :key="f.id" class="flex items-center gap-2 text-sm">
               <span class="tabular w-5 shrink-0 text-right text-xs text-muted">{{ i + 1 }}</span>
               <img v-if="f.poster" :src="posterUrl(f.poster, 'w185') ?? ''" alt="" loading="lazy" class="h-9 w-6 shrink-0 rounded object-cover" />
               <div v-else class="h-9 w-6 shrink-0 rounded bg-surface-2" />
               <RouterLink :to="{ name: 'film', params: { id: f.id } }" class="min-w-0 flex-1 truncate hover:text-accent" :title="f.title">{{ f.title }}</RouterLink>
-              <Award v-if="key !== 'hybrid' && siteIds.has(f.id)" class="h-3.5 w-3.5 shrink-0 text-accent" :aria-label="t('compare.inHybrid')" />
+              <Award v-if="!hidden && key !== 'hybrid' && siteIds.has(f.id)" class="h-3.5 w-3.5 shrink-0 text-accent" :aria-label="t('compare.inHybrid')" />
             </li>
           </ol>
+          <button
+            v-if="hidden"
+            type="button"
+            class="mt-4 w-full rounded-xl border border-line py-2 text-sm transition hover:border-accent hover:text-accent"
+            @click="pick(key)"
+          >
+            {{ t('compare.blind.pick') }}
+          </button>
         </div>
       </div>
-      <p v-if="live" class="flex items-center gap-1 text-xs text-muted"><Award class="h-3.5 w-3.5 text-accent" /> {{ t('compare.inHybrid') }}</p>
+      <div v-if="blind && picked" class="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface p-4 text-sm">
+        <p class="min-w-0 flex-1">
+          {{ verdict }} <span class="text-muted">{{ t('compare.blind.tally', { site: tally.site, tries: tally.tries }) }}</span>
+        </p>
+        <button type="button" class="shrink-0 rounded-xl bg-accent px-3 py-1.5 text-accent-ink" @click="startBlind">{{ t('compare.blind.again') }}</button>
+      </div>
+      <p v-if="live && !hidden" class="flex items-center gap-1 text-xs text-muted"><Award class="h-3.5 w-3.5 text-accent" /> {{ t('compare.inHybrid') }}</p>
     </section>
 
     <!-- итоговый тест -->
