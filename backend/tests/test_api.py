@@ -25,9 +25,25 @@ def test_films_suggest_by_title_in_any_language(client):
 
 
 def test_films_show_more_limit(client):
-    # «Показать ещё» в блоке «Оцените фильмы» просит до 96 фильмов: 100 разрешено, больше – нет
+    # за один запрос – до 100 фильмов, дальше – следующие страницы (offset)
     assert client.get("/api/films", params={"k": 100}).status_code == 200
     assert client.get("/api/films", params={"k": 101}).status_code == 422
+    assert client.get("/api/films", params={"offset": -1}).status_code == 422
+
+
+def test_show_more_pages_follow_each_other(client):
+    """«Показать ещё» – страницы (offset) идут подряд без повторов, пока список не кончится."""
+    assert ids(client.get("/api/films", params={"k": 3}).json()["items"]) == [1, 2, 3]
+    assert ids(client.get("/api/films", params={"k": 3, "offset": 3}).json()["items"]) == [4, 5, 6]
+    assert client.get("/api/films", params={"k": 3, "offset": 8}).json()["items"] == []
+    assert ids(client.get("/api/films", params={"q": "film", "k": 5, "offset": 5}).json()["items"]) == [6, 7, 8]
+    whole = ids(client.post("/api/recommend", json={"ratings": SPACE_FAN, "k": 7}).json()["items"])
+    pages = [ids(client.post("/api/recommend", json={"ratings": SPACE_FAN, "k": 3, "offset": o}).json()["items"])
+             for o in (0, 3, 6)]
+    assert sum(pages, []) == whole and len(whole) == 7  # все, кроме оценённого
+    assert ids(client.post("/api/new", json={"ratings": SPACE_FAN, "k": 1, "offset": 1}).json()["items"]) == [8]
+    space = client.get("/api/search", params={"q": "кино про космос", "k": 4, "offset": 4}).json()["items"]
+    assert set(ids(space)) == {4, 5, 6, 8}
 
 
 def test_titles_follow_language_chain(client):

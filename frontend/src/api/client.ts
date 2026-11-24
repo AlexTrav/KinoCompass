@@ -66,14 +66,15 @@ const q = (params: Record<string, string | number>) =>
 
 export const api = {
   health: () => request<Health>('/api/health'),
-  films: (query: string, lang: AppLocale, k = 24, signal?: AbortSignal) =>
-    request<Items>(`/api/films?${q({ q: query, lang, k })}`, undefined, signal),
-  search: (query: string, lang: AppLocale, k = 24, signal?: AbortSignal) =>
-    request<Items>(`/api/search?${q({ q: query, lang, k })}`, undefined, signal),
-  recommend: (ratings: Ratings, lang: AppLocale, popularityWeight: number, signal?: AbortSignal, k = 12) =>
-    request<Recommend>('/api/recommend', { ratings, lang, popularity_weight: popularityWeight, k }, signal),
-  newItems: (ratings: Ratings, lang: AppLocale, signal?: AbortSignal, k = 12) =>
-    request<NewItems>('/api/new', { ratings, lang, k }, signal),
+  // offset – с какого места списка: кнопка «Показать ещё» догружает следующую страницу
+  films: (query: string, lang: AppLocale, k = 24, signal?: AbortSignal, offset = 0) =>
+    request<Items>(`/api/films?${q({ q: query, lang, k, offset })}`, undefined, signal),
+  search: (query: string, lang: AppLocale, k = 24, signal?: AbortSignal, offset = 0) =>
+    request<Items>(`/api/search?${q({ q: query, lang, k, offset })}`, undefined, signal),
+  recommend: (ratings: Ratings, lang: AppLocale, popularityWeight: number, signal?: AbortSignal, k = 12, offset = 0) =>
+    request<Recommend>('/api/recommend', { ratings, lang, popularity_weight: popularityWeight, k, offset }, signal),
+  newItems: (ratings: Ratings, lang: AppLocale, signal?: AbortSignal, k = 12, offset = 0) =>
+    request<NewItems>('/api/new', { ratings, lang, k, offset }, signal),
   film: (id: number, lang: AppLocale) => request<FilmDetail>(`/api/film/${id}?${q({ lang, k: 12 })}`),
   compare: (ratings: Ratings, lang: AppLocale) => request<Compare>('/api/compare', { ratings, lang, k: 10 }),
   map: (lang: AppLocale) => request<{ films: MapFilm[] }>(`/api/map?${q({ lang })}`),

@@ -105,10 +105,14 @@ class Rated(BaseModel):
     rating: float = Field(ge=0.5, le=5)
 
 
+OFFSET_MAX = 25_000  # в каталоге 23 349 фильмов: «Показать ещё» листает страницы до конца списка
+
+
 class Profile(BaseModel):
     ratings: list[Rated] = Field(min_length=1, max_length=500)
     lang: Lang = "ru"
     k: int = Field(10, ge=1, le=50)
+    offset: int = Field(0, ge=0, le=OFFSET_MAX, description="с какого места списка (кнопка «Показать ещё»)")
 
 
 class RecommendIn(Profile):
@@ -139,21 +143,21 @@ def health(request: Request) -> dict:
 
 @app.get("/api/films")
 def films(request: Request, q: str = Query("", max_length=100), lang: Lang = "ru",
-          k: int = Query(20, ge=1, le=100)) -> dict:
+          k: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0, le=OFFSET_MAX)) -> dict:
     """Подсказки по названию (на любом из трёх языков); пустой запрос – популярное за последний год.
-    До 100 фильмов – для кнопки «Показать ещё» в блоке «Оцените фильмы»."""
-    return {"items": store(request).suggest(q, k, lang)}
+    offset – следующая страница для кнопки «Показать ещё»: так можно пролистать весь каталог."""
+    return {"items": store(request).suggest(q, k, lang, offset)}
 
 
 @app.post("/api/recommend")
 def recommend(request: Request, body: RecommendIn) -> dict:
     """10 советов модели сайта «популярность × ALS»; оценённые фильмы не советуются. У каждого – because:
     оценённые фильмы с наибольшим вкладом в балл ALS (точное разложение) и их доля. influence – вклад каждого
-    оценённого фильма во всю подборку (средняя доля по советам)."""
+    оценённого фильма в эту страницу советов (средняя доля по советам); offset – следующая страница."""
     s = store(request)
     index, _, unknown = known(s, body)
-    items, influence = s.explain(s.top(s.site(index, body.popularity_weight), body.k, body.lang, skip=index),
-                                 index, body.lang)
+    page = s.top(s.site(index, body.popularity_weight), body.k, body.lang, skip=index, offset=body.offset)
+    items, influence = s.explain(page, index, body.lang)
     return {"items": items, "influence": influence,
             "popularity_weight": body.popularity_weight, "tested_weight": core.SITE_WEIGHT, "unknown": unknown}
 
@@ -164,8 +168,8 @@ def new(request: Request, body: Profile) -> dict:
     У каждой – because: оценённые фильмы с наибольшим вкладом в балл контентной модели (точное разложение)."""
     s = store(request)
     index, values, unknown = known(s, body)
-    return {"items": s.new_items(index, values, body.k, body.lang), "rule": s.manifest["new_items"]["rule"],
-            "unknown": unknown}
+    return {"items": s.new_items(index, values, body.k, body.lang, body.offset),
+            "rule": s.manifest["new_items"]["rule"], "unknown": unknown}
 
 
 @app.get("/api/film/{movie_id}")
@@ -184,11 +188,12 @@ def film(request: Request, movie_id: int, lang: Lang = "ru", k: int = Query(10, 
 
 @app.get("/api/search")
 def search(request: Request, q: str = Query(min_length=1, max_length=200), lang: Lang = "ru",
-           k: int = Query(10, ge=1, le=50)) -> dict:
-    """Поиск словами по смыслу (e5, три языка); совпадение с названием целиком – первым."""
+           k: int = Query(10, ge=1, le=50), offset: int = Query(0, ge=0, le=OFFSET_MAX)) -> dict:
+    """Поиск словами по смыслу (e5, три языка); совпадение с названием целиком – первым. offset – следующая
+    страница: после первых 50 (порядок, проверенный на 30 запросах) – остальной каталог по смыслу."""
     if not q.strip():
         raise HTTPException(422, "пустой запрос")
-    return store(request).search(q.strip(), k, lang)
+    return store(request).search(q.strip(), k, lang, offset)
 
 
 @app.post("/api/compare")

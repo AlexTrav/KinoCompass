@@ -11,7 +11,8 @@ import { formatPercent, posterUrl } from '../utils/format'
 // панель «Почему такие советы» – разбор всей подборки: вклад ваших фильмов (influence – точное разложение балла
 // ALS по всем показанным советам, считает сервер), доля популярности (ползунок), стороны компаса у советов и
 // честная оговорка: ALS учитывает сам факт оценки, а не число звёзд (так модель обучалась и проверялась)
-const props = defineProps<{ influence: Because[]; recs: Film[]; weight: number }>()
+// basis – по скольким первым советам посчитан influence (страницы «Показать ещё» его не меняют)
+const props = defineProps<{ influence: Because[]; recs: Film[]; weight: number; basis: number }>()
 const SHOWN = 6
 
 const { t, locale } = useI18n()
@@ -26,7 +27,10 @@ const top = computed(() => split.value.strong[0])
 const widest = computed(() => top.value?.share || 1) // полоса самого влиятельного фильма – во всю ширину
 const genres = computed(() => directionCounts(props.recs).slice(0, 3))
 const compass = computed(() => needle(ratings.value).top)
-const compassInRecs = computed(() => genres.value.some(([d]) => d === compass.value))
+// «советы согласны с компасом» – только если его сторона в советах самая частая или хотя бы у четверти советов
+const compassInRecs = computed(() =>
+  genres.value.some(([d, n]) => d === compass.value && (n === genres.value[0][1] || n >= props.recs.length / 4)),
+)
 // низко оценённый фильм, который всё равно заметно влияет, – пример к оговорке про звёзды
 const low = computed(() => split.value.strong.map((f) => ({ f, r: rated.value.get(f.id) })).find(({ r }) => r && r.rating <= 2.5))
 </script>
@@ -42,7 +46,8 @@ const low = computed(() => split.value.strong.map((f) => ({ f, r: rated.value.ge
       <ChevronDown class="h-5 w-5 shrink-0 text-muted transition group-open:rotate-180" />
     </summary>
 
-    <div class="grid gap-6 border-t border-line p-4 sm:p-5 lg:grid-cols-2">
+    <!-- grid-cols-1 – колонка minmax(0, 1fr): длинное название в одну строку не растягивает панель шире экрана -->
+    <div class="grid grid-cols-1 gap-6 border-t border-line p-4 sm:p-5 lg:grid-cols-2">
       <!-- вклад ваших фильмов во всю подборку -->
       <section class="space-y-3">
         <h3 class="text-sm font-semibold">{{ t('insight.strong') }}</h3>
@@ -52,7 +57,7 @@ const low = computed(() => split.value.strong.map((f) => ({ f, r: rated.value.ge
             <div v-else class="flex h-10 w-7 shrink-0 items-center justify-center rounded bg-surface-2 text-muted"><FilmIcon class="h-3.5 w-3.5" /></div>
             <div class="min-w-0 flex-1 space-y-1">
               <div class="flex items-baseline justify-between gap-2 text-sm">
-                <RouterLink :to="{ name: 'film', params: { id: f.id } }" class="truncate hover:text-accent">{{ f.title }}</RouterLink>
+                <RouterLink :to="{ name: 'film', params: { id: f.id } }" class="min-w-0 truncate hover:text-accent">{{ f.title }}</RouterLink>
                 <span class="tabular shrink-0 font-semibold">{{ pct(f.share) }}</span>
               </div>
               <div class="h-1.5 rounded-full bg-surface-2">
@@ -63,7 +68,7 @@ const low = computed(() => split.value.strong.map((f) => ({ f, r: rated.value.ge
           </li>
         </ul>
         <p v-if="split.strong.length > SHOWN" class="text-xs text-muted">{{ t('insight.moreFilms', { n: split.strong.length - SHOWN }) }}</p>
-        <p class="text-xs text-muted">{{ t('insight.strongHint', { n: recs.length }) }}</p>
+        <p class="text-xs text-muted">{{ t('insight.strongHint', { n: basis }) }}</p>
         <p v-if="split.weak.length" class="text-sm text-muted">
           <span class="text-ink">{{ t('insight.weak') }}:</span> {{ split.weak.map((f) => `«${f.title}»`).join(', ') }}. {{ t('insight.weakText') }}
         </p>

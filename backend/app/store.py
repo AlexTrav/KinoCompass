@@ -94,11 +94,14 @@ class Store:
             out["score"] = round(float(score), 4)
         return out
 
-    def top(self, scores: np.ndarray, k: int, lang: str, skip: np.ndarray | None = None) -> list[dict]:
+    def top(self, scores: np.ndarray, k: int, lang: str, skip: np.ndarray | None = None,
+            offset: int = 0) -> list[dict]:
+        """Карточки k фильмов с наибольшим баллом, начиная с места offset (страница кнопки «Показать ещё»);
+        фильмы с баллом −inf (не участвуют) не возвращаются – на них список кончается."""
         scores = scores.astype(np.float64, copy=True)
         if skip is not None and len(skip):
             scores[skip] = -np.inf
-        order = np.argsort(-scores, kind="stable")[:k]
+        order = np.argsort(-scores, kind="stable")[offset:offset + k]
         return [self.card(int(i), lang, scores[i]) for i in order if np.isfinite(scores[i])]
 
     def rows_of(self, ratings: dict[int, float]) -> tuple[np.ndarray, np.ndarray, list[int]]:
@@ -145,12 +148,12 @@ class Store:
     def content(self, index: np.ndarray, values: np.ndarray, candidates: np.ndarray | None = None) -> np.ndarray:
         return core.content_scores(self.tfidf, index, values, candidates)
 
-    def new_items(self, index: np.ndarray, values: np.ndarray, k: int, lang: str) -> list[dict]:
+    def new_items(self, index: np.ndarray, values: np.ndarray, k: int, lang: str, offset: int = 0) -> list[dict]:
         """Новинки по сходству описаний; у каждой because – «похожа описанием на …»: точное разложение балла
         контентной модели на вклады оценённых фильмов (site_core.content_contributions)."""
         scores = np.full(len(self.catalog), -np.inf)
         scores[self.new_rows] = self.content(index, values, self.new_rows)
-        cards = self.top(scores, k, lang, skip=index)
+        cards = self.top(scores, k, lang, skip=index, offset=offset)
         if cards:
             targets = np.array([self.row[c["id"]] for c in cards], dtype=np.int64)
             for card, row in zip(cards, self.shares(core.content_contributions(self.tfidf, index, values, targets))):
@@ -178,12 +181,12 @@ class Store:
         return next((text[l] for l in OVERVIEW_ORDER[lang] if text[l]), None)
 
     # ---------- поиск ----------
-    def suggest(self, query: str, k: int, lang: str) -> list[dict]:
+    def suggest(self, query: str, k: int, lang: str, offset: int = 0) -> list[dict]:
         """Подсказки по названию: точное совпадение, потом начало названия, потом вхождение; внутри – самые
-        оценённые выше. Пустой запрос – популярное за последний год."""
+        оценённые выше. Пустой запрос – популярное за последний год (весь каталог, постранично)."""
         q = core.normalize_title(query)
         if not q:
-            return self.top(self.popularity, k, lang)
+            return self.top(self.popularity, k, lang, offset=offset)
         exact, prefix, inside = [], [], []
         for i, joined in enumerate(self.names):
             if q not in joined:
@@ -191,15 +194,22 @@ class Store:
             names = joined.split("|")
             (exact if q in names else prefix if any(n.startswith(q) for n in names) else inside).append(i)
         rows = [i for group in (exact, prefix, inside) for i in sorted(group, key=lambda i: -self.n_ratings[i])]
-        return [self.card(i, lang) for i in rows[:k]]
+        return [self.card(i, lang) for i in rows[offset:offset + k]]
 
-    def search(self, query: str, k: int, lang: str) -> dict:
-        """Поиск словами: фильмы, чьё название совпало с запросом целиком, – первыми; дальше – e5 с известностью."""
-        titled = sorted(self.exact.get(core.normalize_title(query), []), key=lambda i: -self.n_ratings[i])
-        scores = core.search_scores(self.e5 @ self.encode(query), self.known_ranks, core.SEARCH_WEIGHT)
-        found = [self.card(i, lang) | {"by": "title"} for i in titled[:k]]
-        rest = self.top(scores, k, lang, skip=np.array(titled, dtype=np.int64))
-        return {"items": (found + [c | {"by": "meaning"} for c in rest])[:k]}
+    def search(self, query: str, k: int, lang: str, offset: int = 0) -> dict:
+        """Поиск словами: фильмы, чьё название совпало с запросом целиком, – первыми (самые оценённые выше); дальше –
+        первые 50 по смыслу e5 с известностью (как проверялось, search_site.py); за ними – остальной каталог просто
+        по смыслу, чтобы кнопка «Показать ещё» не упиралась в 50. Первые 50 от этого не меняются."""
+        titled = set(self.exact.get(core.normalize_title(query), []))
+        cosine = self.e5 @ self.encode(query)
+        scores = core.search_scores(cosine, self.known_ranks, core.SEARCH_WEIGHT)
+        tail = ~np.isfinite(scores)
+        scores[tail] = cosine[tail] - 10  # ниже любого из первых 50: их баллы – ранги от 0 до 1
+        rows = np.array(sorted(titled), dtype=np.int64)
+        if len(rows):
+            scores[rows] = 10 + self.known_ranks[rows]  # выше всех, между собой – по числу оценок
+        page = self.top(scores, k, lang, offset=offset)
+        return {"items": [c | {"by": "title" if self.row[c["id"]] in titled else "meaning"} for c in page]}
 
     # ---------- карта вкусов ----------
     def taste_map(self, lang: str) -> bytes:

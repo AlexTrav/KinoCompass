@@ -95,7 +95,7 @@ export default {
     title: 'Why these recommendations',
     teaser: 'Most influential: “{title}” – {share}',
     strong: 'Films that shaped the list most',
-    strongHint: 'Average share in the taste part of the score over the {n} recommendations shown – an exact calculation of the model.',
+    strongHint: 'Average share in the taste part of the score over the first {n} recommendations – an exact calculation of the model.',
     moreFilms: 'And {n} more with a smaller share',
     weak: 'Hardly any influence',
     weakText: 'Their viewers overlap little with the viewers of the recommendations. Rate similar films and this direction will grow.',

@@ -85,7 +85,7 @@ function onClick(event: MouseEvent) {
             <div v-else class="flex h-12 w-8 shrink-0 items-center justify-center rounded bg-surface-2 text-muted"><FilmIcon class="h-4 w-4" /></div>
             <div class="min-w-0 flex-1 space-y-1">
               <div class="flex items-baseline justify-between gap-2 text-sm">
-                <RouterLink :to="{ name: 'film', params: { id: b.id } }" class="truncate hover:text-accent" @click="close">{{ b.title }}</RouterLink>
+                <RouterLink :to="{ name: 'film', params: { id: b.id } }" class="min-w-0 truncate hover:text-accent" @click="close">{{ b.title }}</RouterLink>
                 <span class="tabular shrink-0 font-semibold">{{ pct(b.share) }}</span>
               </div>
               <div class="h-1.5 rounded-full bg-surface-2">
@@ -105,7 +105,7 @@ function onClick(event: MouseEvent) {
       <section class="space-y-1.5 rounded-xl bg-surface-2 p-4 text-xs leading-relaxed text-muted">
         <h3 class="font-semibold text-ink">{{ t('why.how') }}</h3>
         <p>{{ kind === 'plot' ? t('why.howPlot') : t('why.howTaste') }}</p>
-        <p class="font-mono text-[11px]">{{ kind === 'plot' ? t('why.formulaPlot') : t('why.formula') }}</p>
+        <p class="italic text-ink/80">{{ kind === 'plot' ? t('why.formulaPlot') : t('why.formula') }}</p>
       </section>
     </div>
   </dialog>

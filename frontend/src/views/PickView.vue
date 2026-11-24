@@ -17,10 +17,16 @@ const { t, locale } = useI18n()
 const lang = computed(() => locale.value as AppLocale)
 const { ratings, payload, remove, clear } = useRatings()
 
-// ---------- «Показать ещё»: первые карточки грузятся быстро, остальные – по кнопке ----------
-// поиск по смыслу переставляет только первые 50 фильмов (site_core.SEARCH_POOL), дальше выдача не по смыслу
+// ---------- «Показать ещё»: страница за страницей (offset), пока фильмы в списке не кончатся ----------
+// популярное – весь каталог, поиск по названию – все совпадения, новинки – все 443, советы – весь каталог
 const STEP = { recs: 12, fresh: 12, pool: 24 }
-const MAX = { recs: 48, fresh: 36, pool: 96, meaning: 48 }
+const PAGE_MAX = 50 // больше за один запрос сервер не отдаёт: после новой оценки открытые советы – до 50
+
+/** К списку – следующая страница без повторов; кнопка остаётся, пока страница пришла полной. */
+function append(list: Film[], page: Film[]): Film[] {
+  const seen = new Set(list.map((f) => f.id))
+  return [...list, ...page.filter((f) => !seen.has(f.id))]
+}
 
 // ---------- фильмы для оценки: популярное, поиск по названию или по описанию ----------
 const mode = ref<'title' | 'meaning'>('title')
@@ -28,40 +34,30 @@ const query = ref('')
 const debounced = refDebounced(query, 350)
 const pool = ref<Film[]>([])
 const poolLoading = ref(false)
-const poolK = ref(STEP.pool)
+const poolMore = ref(false)
 let poolAbort: AbortController | null = null
 const byMeaning = computed(() => mode.value === 'meaning' && !!debounced.value.trim())
-const poolMax = computed(() => (byMeaning.value ? MAX.meaning : MAX.pool))
 
-async function loadPool() {
+async function loadPool(more = false) {
   poolAbort?.abort()
   poolAbort = new AbortController()
   poolLoading.value = true
   const q = debounced.value.trim()
+  const offset = more ? pool.value.length : 0
   try {
     const res = byMeaning.value
-      ? await api.search(q, lang.value, poolK.value, poolAbort.signal)
-      : await api.films(q, lang.value, poolK.value, poolAbort.signal)
-    pool.value = res.items
+      ? await api.search(q, lang.value, STEP.pool, poolAbort.signal, offset)
+      : await api.films(q, lang.value, STEP.pool, poolAbort.signal, offset)
+    pool.value = more ? append(pool.value, res.items) : res.items
+    poolMore.value = res.items.length === STEP.pool
   } catch {
     // aborted или сеть – плашка сервера покажет причину
   } finally {
     poolLoading.value = false
   }
 }
-watch(
-  [debounced, mode, lang],
-  () => {
-    poolK.value = STEP.pool // новый запрос – снова с первых карточек
-    loadPool()
-  },
-  { immediate: true },
-)
-const poolMore = computed(() => pool.value.length >= poolK.value && poolK.value < poolMax.value)
-function morePool() {
-  poolK.value = Math.min(poolK.value + STEP.pool, poolMax.value)
-  loadPool()
-}
+// новый запрос – снова с первой страницы
+watch([debounced, mode, lang], () => loadPool(), { immediate: true })
 
 // ---------- советы и новинки: пересчёт при каждой оценке и движении ползунка ----------
 const weight = ref(0.4) // вес популярности: 0,4 – как на тесте
@@ -69,14 +65,17 @@ const novelty = computed({ get: () => Math.round((0.8 - weight.value) * 10) / 10
 const recs = ref<Film[]>([])
 const fresh = ref<Film[]>([])
 const recState = ref<'idle' | 'loading' | 'error'>('idle')
-const recK = ref(STEP.recs)
-const freshK = ref(STEP.fresh)
+const recsMore = ref(false)
+const freshMore = ref(false)
+const moreLoading = ref<'recs' | 'fresh' | null>(null)
 const trigger = refDebounced(computed(() => JSON.stringify([payload.value, weight.value, lang.value])), 300)
 let recAbort: AbortController | null = null
 
-// объяснения: вклад ваших фильмов во всю подборку и вес популярности, с которым она посчитана (ползунок
-// мог сдвинуться, пока ответ в пути); окно «Почему этот фильм» – для совета (taste) или новинки (plot)
+// объяснения: вклад ваших фильмов в первую страницу советов (столько советов – influenceBasis) и вес
+// популярности, с которым они посчитаны (ползунок мог сдвинуться, пока ответ в пути); окно «Почему этот фильм» –
+// для совета (taste) или новинки (plot)
 const influence = ref<Because[]>([])
+const influenceBasis = ref(0)
 const recWeight = ref(weight.value)
 const why = ref<{ film: Film; kind: 'taste' | 'plot' } | null>(null)
 
@@ -90,31 +89,48 @@ async function loadRecs() {
   }
   recAbort = new AbortController()
   recState.value = 'loading'
+  // после новой оценки список пересчитывается заново, уже открытое число карточек сохраняется (до 50)
+  const recK = Math.min(Math.max(STEP.recs, recs.value.length), PAGE_MAX)
+  const freshK = Math.min(Math.max(STEP.fresh, fresh.value.length), PAGE_MAX)
   try {
     const [r, n] = await Promise.all([
-      api.recommend(payload.value, lang.value, weight.value, recAbort.signal, recK.value),
-      api.newItems(payload.value, lang.value, recAbort.signal, freshK.value),
+      api.recommend(payload.value, lang.value, weight.value, recAbort.signal, recK),
+      api.newItems(payload.value, lang.value, recAbort.signal, freshK),
     ])
     recs.value = r.items
+    recsMore.value = r.items.length === recK
     influence.value = r.influence ?? []
+    influenceBasis.value = r.items.length
     recWeight.value = r.popularity_weight
     fresh.value = n.items
+    freshMore.value = n.items.length === freshK
     recState.value = 'idle'
   } catch (err) {
     if ((err as Error).message !== 'aborted') recState.value = 'error'
   }
 }
-// после новой оценки советы пересчитываются, уже открытое число карточек сохраняется
 watch(trigger, loadRecs, { immediate: true })
-const recsMore = computed(() => recs.value.length >= recK.value && recK.value < MAX.recs)
-const freshMore = computed(() => fresh.value.length >= freshK.value && freshK.value < MAX.fresh)
-function moreRecs() {
-  recK.value = Math.min(recK.value + STEP.recs, MAX.recs)
-  loadRecs()
-}
-function moreFresh() {
-  freshK.value = Math.min(freshK.value + STEP.fresh, MAX.fresh)
-  loadRecs()
+
+// следующая страница советов или новинок – с тем же весом популярности, что у открытого списка; новая оценка
+// во время загрузки отменяет её (recAbort), чтобы не смешать списки по старым и новым оценкам
+async function more(kind: 'recs' | 'fresh') {
+  const signal = recAbort?.signal
+  moreLoading.value = kind
+  try {
+    if (kind === 'recs') {
+      const r = await api.recommend(payload.value, lang.value, recWeight.value, signal, STEP.recs, recs.value.length)
+      recs.value = append(recs.value, r.items)
+      recsMore.value = r.items.length === STEP.recs
+    } else {
+      const n = await api.newItems(payload.value, lang.value, signal, STEP.fresh, fresh.value.length)
+      fresh.value = append(fresh.value, n.items)
+      freshMore.value = n.items.length === STEP.fresh
+    }
+  } catch {
+    // отменено новой оценкой или сеть – плашка сервера покажет причину
+  } finally {
+    moreLoading.value = null
+  }
 }
 
 const moreClass =
@@ -195,6 +211,7 @@ const progress = computed(() => Math.min(1, ratings.value.length / ENOUGH))
         :influence="influence"
         :recs="recs"
         :weight="recWeight"
+        :basis="influenceBasis"
       />
       <p v-if="!ratings.length" class="rounded-xl border border-dashed border-line p-6 text-center text-muted">{{ t('rec.empty') }}</p>
       <p v-else-if="recState === 'error'" class="flex items-center gap-3 text-muted">
@@ -204,7 +221,7 @@ const progress = computed(() => Math.min(1, ratings.value.length / ENOUGH))
       <div v-else class="grid grid-cols-2 gap-4 transition-opacity sm:grid-cols-3 lg:grid-cols-6" :class="{ 'opacity-60': recState === 'loading' }">
         <FilmCard v-for="f in recs" :key="f.id" :film="f" show-because @why="why = { film: $event, kind: 'taste' }" />
       </div>
-      <button v-if="ratings.length && recState !== 'error' && recsMore" type="button" :class="moreClass" :disabled="recState === 'loading'" @click="moreRecs">
+      <button v-if="ratings.length && recState !== 'error' && recsMore" type="button" :class="moreClass" :disabled="recState === 'loading' || moreLoading === 'recs'" @click="more('recs')">
         {{ t('common.more') }}
       </button>
     </section>
@@ -217,7 +234,7 @@ const progress = computed(() => Math.min(1, ratings.value.length / ENOUGH))
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <FilmCard v-for="f in fresh" :key="f.id" :film="f" show-because because-kind="plot" @why="why = { film: $event, kind: 'plot' }" />
       </div>
-      <button v-if="freshMore" type="button" :class="moreClass" :disabled="recState === 'loading'" @click="moreFresh">
+      <button v-if="freshMore" type="button" :class="moreClass" :disabled="recState === 'loading' || moreLoading === 'fresh'" @click="more('fresh')">
         {{ t('common.more') }}
       </button>
     </section>
@@ -260,7 +277,7 @@ const progress = computed(() => Math.min(1, ratings.value.length / ENOUGH))
       <div class="grid grid-cols-2 gap-4 transition-opacity sm:grid-cols-3 lg:grid-cols-6" :class="{ 'opacity-60': poolLoading }">
         <FilmCard v-for="f in pool" :key="f.id" :film="f" />
       </div>
-      <button v-if="poolMore" type="button" :class="moreClass" :disabled="poolLoading" @click="morePool">
+      <button v-if="poolMore" type="button" :class="moreClass" :disabled="poolLoading" @click="loadPool(true)">
         {{ t('common.more') }}
       </button>
     </section>
