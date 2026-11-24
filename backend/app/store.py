@@ -141,6 +141,13 @@ class Store:
         index = np.array([i], dtype=np.int64)
         return self.top(self.site(index), k, lang, skip=index)
 
+    def similar_plot(self, i: int, k: int, lang: str) -> list[dict]:
+        """«Похожие по описанию» – ближайшие векторы e5 фильма (название, жанры, теги, описание): оценки людей не
+        участвуют. Правило – как в поиске: первые 50 по смыслу, известность переставляет их с весом 0,1. Векторы
+        уже в памяти для поиска, расчёт – одно умножение матрицы на вектор."""
+        scores = core.search_scores(self.e5 @ self.e5[i], self.known_ranks, core.SEARCH_WEIGHT)
+        return self.top(scores, k, lang, skip=np.array([i], dtype=np.int64))
+
     def overview(self, i: int, lang: str) -> str | None:
         with sqlite3.connect(f"file:{self.path / 'overviews.db'}?mode=ro", uri=True) as db:
             row = db.execute("SELECT ru, en FROM overviews WHERE id = ?", (int(self.ids[i]),)).fetchone()

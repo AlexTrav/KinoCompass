@@ -27,6 +27,7 @@ export interface FilmDetail extends Film {
   imdb_id: string | null
   tmdb_id: number | null
   similar: Film[]
+  similar_plot?: Film[] // «похожие по описанию» (e5); нет у прежней версии API – пока Render не обновился
 }
 
 // оценка человека – хранится только в его браузере (useRatings), вместе с тем, что нужно показать без запроса

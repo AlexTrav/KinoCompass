@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { api } from '../api/client'
 import FilmCard from '../components/FilmCard.vue'
+import HintTip from '../components/HintTip.vue'
 import StarRating from '../components/StarRating.vue'
 import { useRatings } from '../composables/useRatings'
 import type { AppLocale, FilmDetail } from '../types'
@@ -36,6 +37,13 @@ const rating = computed({
     if (value) rate(film.value, value)
     else remove(film.value.id)
   },
+})
+
+// два ряда похожих – по поведению людей (ALS) и по смыслу описания (e5): сколько фильмов нашли оба подхода
+const plot = computed(() => film.value?.similar_plot ?? [])
+const common = computed(() => {
+  const behaviour = new Set(film.value?.similar.map((f) => f.id) ?? [])
+  return plot.value.filter((f) => behaviour.has(f.id)).length
 })
 </script>
 
@@ -90,10 +98,26 @@ const rating = computed({
       </section>
 
       <section class="space-y-4">
-        <h2 class="text-2xl font-semibold">{{ t('film.similar') }}</h2>
+        <div>
+          <h2 class="flex items-center gap-2 text-2xl font-semibold">{{ t('film.similar') }} <HintTip v-if="plot.length" :text="t('hint.twoRows')" /></h2>
+          <p class="mt-1 text-sm text-muted">{{ t('film.similarBy') }}</p>
+        </div>
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <FilmCard v-for="f in film.similar" :key="f.id" :film="f" />
         </div>
+      </section>
+
+      <section v-if="plot.length" class="space-y-4">
+        <div>
+          <h2 class="text-2xl font-semibold">{{ t('film.plot') }}</h2>
+          <p class="mt-1 text-sm text-muted">{{ t('film.plotBy') }}</p>
+        </div>
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <FilmCard v-for="f in plot" :key="f.id" :film="f" />
+        </div>
+        <p class="tabular text-xs text-muted">
+          {{ common ? t('film.common', { n: common, total: plot.length }) : t('film.commonNone') }}
+        </p>
       </section>
     </template>
   </div>

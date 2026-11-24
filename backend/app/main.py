@@ -167,7 +167,8 @@ def new(request: Request, body: Profile) -> dict:
 
 @app.get("/api/film/{movie_id}")
 def film(request: Request, movie_id: int, lang: Lang = "ru", k: int = Query(10, ge=1, le=50)) -> dict:
-    """Карточка фильма: описание сюжета, ссылки и «с этим фильмом смотрят» (модель сайта по одному фильму)."""
+    """Карточка фильма: описание сюжета, ссылки, «с этим фильмом смотрят» (модель сайта по одному фильму – поведение
+    людей) и «похожие по описанию» (e5 – только смысл текста, без оценок)."""
     s = store(request)
     if movie_id not in s.row:
         raise HTTPException(404, "фильма нет в каталоге")
@@ -175,7 +176,7 @@ def film(request: Request, movie_id: int, lang: Lang = "ru", k: int = Query(10, 
     c = s.catalog[i]
     return {**s.card(i, lang), "titles": {l: s.title(i, l) for l in ("ru", "kk", "en")},
             "overview": s.overview(i, lang), "imdb_id": c["imdb_id"], "tmdb_id": c["tmdb_id"],
-            "similar": s.similar(i, k, lang)}
+            "similar": s.similar(i, k, lang), "similar_plot": s.similar_plot(i, k, lang)}
 
 
 @app.get("/api/search")

@@ -100,6 +100,14 @@ def test_film_card_overview_and_similar(client):
     assert client.get("/api/film/999").status_code == 404
 
 
+def test_film_card_similar_by_plot(client):
+    """«Похожие по описанию» – по векторам e5: у фантастики – фантастика, у мелодрамы – мелодрамы, сам фильм не в списке."""
+    space = client.get("/api/film/2", params={"lang": "ru"}).json()["similar_plot"]
+    assert set(ids(space)[:3]) == {1, 3, 7} and 2 not in ids(space) and len(space) == 7
+    love = client.get("/api/film/4", params={"k": 3}).json()["similar_plot"]
+    assert set(ids(love)) == {5, 6, 8}
+
+
 def test_search_by_meaning_and_by_title(client):
     space = client.get("/api/search", params={"q": "кино про космос", "k": 4}).json()["items"]
     assert set(ids(space)) == {1, 2, 3, 7} and {f["by"] for f in space} == {"meaning"}
