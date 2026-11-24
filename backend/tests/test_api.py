@@ -73,6 +73,17 @@ def test_explanation_is_exact_and_points_to_taste(client, store):
     assert all(abs(sum(b["share"] for b in f["because"]) - 1) < 0.01 for f in items if len(f["because"]) == 3)
 
 
+def test_influence_on_whole_list(client):
+    """«Почему такие советы»: вклад каждого оценённого фильма во всю подборку – средняя доля по советам.
+    Три совета из пяти – мелодрамы, их объясняет единственная оценённая мелодрама 4."""
+    ratings = [{"id": 1, "rating": 5}, {"id": 2, "rating": 4}, {"id": 4, "rating": 4}]
+    body = client.post("/api/recommend", json={"ratings": ratings, "popularity_weight": 0, "k": 5}).json()
+    influence = body["influence"]
+    assert {f["id"] for f in influence} == {1, 2, 4} and influence[0]["id"] == 4
+    assert [f["share"] for f in influence] == sorted((f["share"] for f in influence), reverse=True)
+    assert abs(sum(f["share"] for f in influence) - 1) < 0.01 and influence[0]["title"] == "Фильм 4"
+
+
 def test_unknown_and_invalid_ratings(client):
     body = client.post("/api/recommend", json={"ratings": [*SPACE_FAN, {"id": 999, "rating": 4}]}).json()
     assert body["unknown"] == [999]
@@ -88,6 +99,17 @@ def test_new_items_only_from_new_pool(client):
     assert ids(space["items"]) == [7, 8] and space["rule"] == "год выпуска ≥ 2022"
     love = client.post("/api/new", json={"ratings": [{"id": 1, "rating": 1}, {"id": 4, "rating": 5}]}).json()
     assert ids(love["items"])[0] == 8  # не понравившаяся фантастика тянет вниз (вес centered)
+
+
+def test_new_items_explained_by_description(client, store):
+    """У новинки – «похожа описанием на …»: вклады оценённых фильмов в сумме дают балл контентной модели."""
+    index, values = np.array([store.row[1], store.row[4]]), np.array([1.0, 5.0])
+    targets = np.arange(len(store.ids))
+    c = core.content_contributions(store.tfidf, index, values, targets)
+    assert np.allclose(c.sum(axis=1), core.content_scores(store.tfidf, index, values))
+    love = client.post("/api/new", json={"ratings": [{"id": 1, "rating": 1}, {"id": 4, "rating": 5}]}).json()["items"]
+    assert love[0]["because"] == [{"id": 4, "title": "Фильм 4", "share": 1.0}]
+    assert love[1]["because"] == []  # фантастика 7 похожа только на не понравившийся фильм 1 – вклад отрицательный
 
 
 def test_film_card_overview_and_similar(client):

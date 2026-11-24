@@ -113,28 +113,49 @@ class Store:
         """Модель сайта «популярность × ALS»; weight – вес популярности (ползунок новизны), 0 – чистый ALS."""
         return core.site_scores(self.pop_ranks, self.items, self.gram, index, self.regularization, self.alpha, weight)
 
-    def explain(self, cards: list[dict], index: np.ndarray, lang: str, top: int = 3) -> list[dict]:
-        """Добавить к советам «потому что понравились …»: оценённые фильмы с наибольшим положительным вкладом
-        в балл ALS и их доля среди положительных вкладов."""
-        if not cards:
-            return cards
-        targets = np.array([self.row[c["id"]] for c in cards], dtype=np.int64)
-        c = core.contributions(self.items, self.gram, self.regularization, self.alpha, index, targets)
-        for card, row in zip(cards, c):
-            positive = np.clip(row, 0, None)
-            total = positive.sum()
-            order = [j for j in np.argsort(-positive, kind="stable")[:top] if positive[j] > 0]
-            card["because"] = [{"id": int(self.ids[index[j]]), "title": self.title(int(index[j]), lang),
-                                "share": round(float(positive[j] / total), 3)} for j in order]
-        return cards
+    @staticmethod
+    def shares(c: np.ndarray) -> np.ndarray:
+        """Вклады (строки – советы, столбцы – оценённые фильмы) -> доли среди положительных вкладов строки;
+        у совета без положительных вкладов – нули."""
+        positive = np.clip(c, 0, None)
+        total = positive.sum(axis=1, keepdims=True)
+        return np.divide(positive, total, out=np.zeros_like(positive), where=total > 0)
+
+    def because(self, row: np.ndarray, index: np.ndarray, lang: str, top: int = 3) -> list[dict]:
+        """До top оценённых фильмов с наибольшей долей вклада в совет (row – доли по столбцам index)."""
+        order = [j for j in np.argsort(-row, kind="stable")[:top] if row[j] > 0]
+        return [{"id": int(self.ids[index[j]]), "title": self.title(int(index[j]), lang),
+                 "share": round(float(row[j]), 3)} for j in order]
+
+    def explain(self, cards: list[dict], index: np.ndarray, lang: str) -> tuple[list[dict], list[dict]]:
+        """Объяснение советов точным разложением балла ALS на вклады оценённых фильмов (site_core.contributions):
+        у каждого совета because – «потому что понравились …»; influence – вклад каждого оценённого фильма во всю
+        подборку: средняя по советам доля (панель «Почему такие советы»), от большего к меньшему."""
+        shares = np.zeros((0, len(index)))
+        if cards:
+            targets = np.array([self.row[c["id"]] for c in cards], dtype=np.int64)
+            shares = self.shares(core.contributions(self.items, self.gram, self.regularization, self.alpha, index,
+                                                    targets))
+            for card, row in zip(cards, shares):
+                card["because"] = self.because(row, index, lang)
+        influence = shares.mean(axis=0) if len(shares) else np.zeros(len(index))
+        return cards, [{"id": int(self.ids[index[j]]), "title": self.title(int(index[j]), lang),
+                        "share": round(float(influence[j]), 3)} for j in np.argsort(-influence, kind="stable")]
 
     def content(self, index: np.ndarray, values: np.ndarray, candidates: np.ndarray | None = None) -> np.ndarray:
         return core.content_scores(self.tfidf, index, values, candidates)
 
     def new_items(self, index: np.ndarray, values: np.ndarray, k: int, lang: str) -> list[dict]:
+        """Новинки по сходству описаний; у каждой because – «похожа описанием на …»: точное разложение балла
+        контентной модели на вклады оценённых фильмов (site_core.content_contributions)."""
         scores = np.full(len(self.catalog), -np.inf)
         scores[self.new_rows] = self.content(index, values, self.new_rows)
-        return self.top(scores, k, lang, skip=index)
+        cards = self.top(scores, k, lang, skip=index)
+        if cards:
+            targets = np.array([self.row[c["id"]] for c in cards], dtype=np.int64)
+            for card, row in zip(cards, self.shares(core.content_contributions(self.tfidf, index, values, targets))):
+                card["because"] = self.because(row, index, lang)
+        return cards
 
     def similar(self, i: int, k: int, lang: str) -> list[dict]:
         """«С этим фильмом смотрят» – та же модель сайта для человека, которому понравился только этот фильм."""

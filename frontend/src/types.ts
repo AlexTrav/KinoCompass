@@ -45,6 +45,7 @@ export interface Items {
 }
 
 export interface Recommend extends Items {
+  influence?: Because[] // вклад каждого оценённого фильма во всю подборку; нет у прежней версии API
   popularity_weight: number
   tested_weight: number
   unknown: number[]

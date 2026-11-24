@@ -8,11 +8,16 @@ import { formatPercent, posterUrl } from '../utils/format'
 import StarRating from './StarRating.vue'
 
 // карточка фильма: постер, название, год; rateable – звёзды под постером; because – «потому что понравились»
-const props = withDefaults(defineProps<{ film: Film; rateable?: boolean; showBecause?: boolean }>(), {
-  rateable: true,
-  showBecause: false,
-})
+// (совет, вклад в балл ALS) или «похож описанием на» (новинка, вклад в балл контентной модели); нажатие – окно
+// «Почему этот фильм» (событие why)
+const props = withDefaults(
+  defineProps<{ film: Film; rateable?: boolean; showBecause?: boolean; becauseKind?: 'taste' | 'plot' }>(),
+  { rateable: true, showBecause: false, becauseKind: 'taste' },
+)
+const emit = defineEmits<{ why: [film: Film] }>()
 const { t, locale } = useI18n()
+// новинка без положительного вклада ни одного фильма – подпись не нужна; совет без него держится на популярности
+const showWhy = computed(() => props.showBecause && !!props.film.because && (props.film.because.length > 0 || props.becauseKind === 'taste'))
 const { byId, rate, remove } = useRatings()
 const rating = computed({
   get: () => byId.value.get(props.film.id) ?? 0,
@@ -59,15 +64,22 @@ const poster = computed(() => posterUrl(props.film.poster))
       <p class="text-xs text-muted">{{ film.year ?? '' }}</p>
     </div>
     <StarRating v-if="rateable" v-model="rating" :size="18" />
-    <p v-if="showBecause && film.because" class="text-xs leading-snug text-muted">
+    <button
+      v-if="showWhy && film.because"
+      type="button"
+      class="group/why text-left text-xs leading-snug text-muted"
+      :aria-label="t('why.open', { title: film.title })"
+      @click="emit('why', film)"
+    >
       <template v-if="film.because.length">
-        {{ t('rec.because') }}:
+        {{ becauseKind === 'plot' ? t('rec.becausePlot') : t('rec.because') }}:
         <span v-for="(b, i) in film.because.slice(0, 2)" :key="b.id">
           <span class="text-ink">{{ b.title }}</span>
           <span class="tabular"> ({{ formatPercent(b.share, locale as AppLocale) }})</span><span v-if="i < Math.min(film.because.length, 2) - 1">, </span>
         </span>
       </template>
       <template v-else>{{ t('rec.popularOnly') }}</template>
-    </p>
+      <span class="ml-1 whitespace-nowrap text-accent group-hover/why:underline">{{ t('rec.why') }}</span>
+    </button>
   </article>
 </template>

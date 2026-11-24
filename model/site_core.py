@@ -55,6 +55,14 @@ def content_scores(tfidf, index: np.ndarray, ratings: np.ndarray, candidates: np
     return np.asarray(target @ profile).ravel()
 
 
+def content_contributions(tfidf, index: np.ndarray, ratings: np.ndarray, targets: np.ndarray) -> np.ndarray:
+    """«Почему эта новинка»: вклад оценённого фильма j в балл контентной модели фильма i – точное разложение
+    content_scores: c[i, j] = centered(оценки)ⱼ · (tᵢ · tⱼ), сумма по j равна баллу. Строки – targets, столбцы – index."""
+    sims = tfidf[targets] @ tfidf[index].T
+    sims = sims.toarray() if hasattr(sims, "toarray") else np.asarray(sims)
+    return sims * centered(ratings)
+
+
 SEARCH_POOL = 50  # поиск: известность переставляет только первые SEARCH_POOL фильмов по смыслу (e5)
 SEARCH_WEIGHT = 0.1  # вес известности (число оценок): на 30 запросах (search_site.py) – единственный не хуже e5
 

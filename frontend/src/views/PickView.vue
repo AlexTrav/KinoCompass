@@ -7,8 +7,10 @@ import { api } from '../api/client'
 import CompassRose from '../components/CompassRose.vue'
 import FilmCard from '../components/FilmCard.vue'
 import HintTip from '../components/HintTip.vue'
+import RecsInsight from '../components/RecsInsight.vue'
+import WhyDialog from '../components/WhyDialog.vue'
 import { ENOUGH, useRatings } from '../composables/useRatings'
-import type { AppLocale, Film } from '../types'
+import type { AppLocale, Because, Film } from '../types'
 import { posterUrl } from '../utils/format'
 
 const { t, locale } = useI18n()
@@ -72,11 +74,18 @@ const freshK = ref(STEP.fresh)
 const trigger = refDebounced(computed(() => JSON.stringify([payload.value, weight.value, lang.value])), 300)
 let recAbort: AbortController | null = null
 
+// объяснения: вклад ваших фильмов во всю подборку и вес популярности, с которым она посчитана (ползунок
+// мог сдвинуться, пока ответ в пути); окно «Почему этот фильм» – для совета (taste) или новинки (plot)
+const influence = ref<Because[]>([])
+const recWeight = ref(weight.value)
+const why = ref<{ film: Film; kind: 'taste' | 'plot' } | null>(null)
+
 async function loadRecs() {
   recAbort?.abort()
   if (!payload.value.length) {
     recs.value = []
     fresh.value = []
+    influence.value = []
     return
   }
   recAbort = new AbortController()
@@ -87,6 +96,8 @@ async function loadRecs() {
       api.newItems(payload.value, lang.value, recAbort.signal, freshK.value),
     ])
     recs.value = r.items
+    influence.value = r.influence ?? []
+    recWeight.value = r.popularity_weight
     fresh.value = n.items
     recState.value = 'idle'
   } catch (err) {
@@ -179,13 +190,19 @@ const progress = computed(() => Math.min(1, ratings.value.length / ENOUGH))
           </div>
         </div>
       </div>
+      <RecsInsight
+        v-if="ratings.length && recState !== 'error' && recs.length && influence.length"
+        :influence="influence"
+        :recs="recs"
+        :weight="recWeight"
+      />
       <p v-if="!ratings.length" class="rounded-xl border border-dashed border-line p-6 text-center text-muted">{{ t('rec.empty') }}</p>
       <p v-else-if="recState === 'error'" class="flex items-center gap-3 text-muted">
         {{ t('rec.error') }}
         <button type="button" class="rounded-lg bg-accent px-3 py-1 text-sm text-accent-ink" @click="loadRecs">{{ t('rec.retry') }}</button>
       </p>
       <div v-else class="grid grid-cols-2 gap-4 transition-opacity sm:grid-cols-3 lg:grid-cols-6" :class="{ 'opacity-60': recState === 'loading' }">
-        <FilmCard v-for="f in recs" :key="f.id" :film="f" show-because />
+        <FilmCard v-for="f in recs" :key="f.id" :film="f" show-because @why="why = { film: $event, kind: 'taste' }" />
       </div>
       <button v-if="ratings.length && recState !== 'error' && recsMore" type="button" :class="moreClass" :disabled="recState === 'loading'" @click="moreRecs">
         {{ t('common.more') }}
@@ -198,7 +215,7 @@ const progress = computed(() => Math.min(1, ratings.value.length / ENOUGH))
         <h2 class="flex items-center gap-2 text-2xl font-semibold">{{ t('rec.newTitle') }} <HintTip :text="t('hint.fresh')" /></h2>
       </div>
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <FilmCard v-for="f in fresh" :key="f.id" :film="f" />
+        <FilmCard v-for="f in fresh" :key="f.id" :film="f" show-because because-kind="plot" @why="why = { film: $event, kind: 'plot' }" />
       </div>
       <button v-if="freshMore" type="button" :class="moreClass" :disabled="recState === 'loading'" @click="moreFresh">
         {{ t('common.more') }}
@@ -247,5 +264,7 @@ const progress = computed(() => Math.min(1, ratings.value.length / ENOUGH))
         {{ t('common.more') }}
       </button>
     </section>
+
+    <WhyDialog :film="why?.film ?? null" :kind="why?.kind ?? 'taste'" :weight="recWeight" @close="why = null" />
   </div>
 </template>

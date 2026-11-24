@@ -1,5 +1,32 @@
 import { angleOf, directionsOf, mainDirection, needle } from './compass'
+import { directionCounts, restShare, splitInfluence } from './explain'
 import { formatNumber, formatPercent, posterUrl } from './format'
+
+describe('объяснение советов', () => {
+  const b = (id: number, share: number) => ({ id, title: `Фильм ${id}`, share })
+
+  it('фильмы с долей меньше 2 % – «почти не повлияли», порядок с сервера сохраняется', () => {
+    const { strong, weak } = splitInfluence([b(1, 0.6), b(2, 0.385), b(3, 0.015)])
+    expect(strong.map((f) => f.id)).toEqual([1, 2])
+    expect(weak.map((f) => f.id)).toEqual([3])
+  })
+
+  it('стороны компаса у советов – по самому характерному жанру фильма, чаще встречающиеся первыми', () => {
+    const films = [
+      { genres: ['Action', 'Sci-Fi', 'Thriller'] }, // фантастика
+      { genres: ['Adventure', 'Fantasy'] }, // фантастика
+      { genres: ['Crime', 'Drama'] }, // триллер
+      { genres: ['IMAX'] }, // без стороны – не считается
+    ]
+    expect(directionCounts(films)).toEqual([['scifi', 2], ['thriller', 1]])
+  })
+
+  it('остаток «остальные ваши фильмы» – только если три самых больших вклада не дают 100 %', () => {
+    expect(restShare([b(1, 0.5), b(2, 0.3), b(3, 0.1)])).toBeCloseTo(0.1)
+    expect(restShare([b(1, 0.667), b(2, 0.333)])).toBe(0)
+    expect(restShare([])).toBe(1)
+  })
+})
 
 describe('компас вкуса', () => {
   it('жанры MovieLens попадают в свои стороны, служебные – никуда', () => {

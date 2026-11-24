@@ -148,17 +148,20 @@ def films(request: Request, q: str = Query("", max_length=100), lang: Lang = "ru
 @app.post("/api/recommend")
 def recommend(request: Request, body: RecommendIn) -> dict:
     """10 советов модели сайта «популярность × ALS»; оценённые фильмы не советуются. У каждого – because:
-    оценённые фильмы с наибольшим вкладом в балл ALS (точное разложение) и их доля."""
+    оценённые фильмы с наибольшим вкладом в балл ALS (точное разложение) и их доля. influence – вклад каждого
+    оценённого фильма во всю подборку (средняя доля по советам)."""
     s = store(request)
     index, _, unknown = known(s, body)
-    items = s.top(s.site(index, body.popularity_weight), body.k, body.lang, skip=index)
-    return {"items": s.explain(items, index, body.lang),
+    items, influence = s.explain(s.top(s.site(index, body.popularity_weight), body.k, body.lang, skip=index),
+                                 index, body.lang)
+    return {"items": items, "influence": influence,
             "popularity_weight": body.popularity_weight, "tested_weight": core.SITE_WEIGHT, "unknown": unknown}
 
 
 @app.post("/api/new")
 def new(request: Request, body: Profile) -> dict:
-    """Новинки (фильмы последних двух лет выпуска в каталоге) по сходству описаний с оценёнными фильмами."""
+    """Новинки (фильмы последних двух лет выпуска в каталоге) по сходству описаний с оценёнными фильмами.
+    У каждой – because: оценённые фильмы с наибольшим вкладом в балл контентной модели (точное разложение)."""
     s = store(request)
     index, values, unknown = known(s, body)
     return {"items": s.new_items(index, values, body.k, body.lang), "rule": s.manifest["new_items"]["rule"],
