@@ -18,6 +18,9 @@ function load(): Rated[] {
 }
 
 const ratings = ref<Rated[]>(load())
+// свои оценки, когда их заменили готовым профилем или оценками из ссылки, – для кнопки «Вернуть мои оценки»;
+// только в памяти вкладки: после перезагрузки остаётся то, что на экране
+const backup = ref<Rated[] | null>(null)
 
 watch(
   ratings,
@@ -49,5 +52,18 @@ export function useRatings() {
     ratings.value = []
   }
 
-  return { ratings, byId, payload, rate, remove, clear }
+  /** Заменить все оценки (готовый профиль, ссылка); свои уходят в резервную копию, если её ещё нет – так после
+   * двух профилей подряд «Вернуть» отдаёт именно свои оценки, а не первый профиль. */
+  function replace(list: Rated[]) {
+    if (backup.value === null && ratings.value.length) backup.value = ratings.value
+    ratings.value = list
+  }
+
+  function restore() {
+    if (backup.value === null) return
+    ratings.value = backup.value
+    backup.value = null
+  }
+
+  return { ratings, byId, payload, backup, rate, remove, clear, replace, restore }
 }

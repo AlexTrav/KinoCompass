@@ -26,4 +26,15 @@ describe('оценки в браузере', () => {
     remove(7)
     expect(ratings.value).toEqual([])
   })
+
+  it('готовый профиль заменяет оценки, «Вернуть» отдаёт свои – даже после двух профилей подряд', () => {
+    const { rate, replace, restore, backup, payload } = useRatings()
+    rate(film(1), 4)
+    replace([{ ...film(2), rating: 5 }])
+    replace([{ ...film(3), rating: 4.5 }])
+    expect(payload.value).toEqual([{ id: 3, rating: 4.5 }])
+    restore()
+    expect(payload.value).toEqual([{ id: 1, rating: 4 }])
+    expect(backup.value).toBeNull()
+  })
 })

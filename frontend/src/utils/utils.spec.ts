@@ -1,6 +1,25 @@
 import { angleOf, directionsOf, mainDirection, needle } from './compass'
 import { directionCounts, restShare, splitInfluence } from './explain'
 import { formatNumber, formatPercent, posterUrl } from './format'
+import { decodeRatings, encodeRatings, shareUrl } from './share'
+
+describe('ссылка «Поделиться»', () => {
+  it('оценки туда и обратно без потерь, половинки звёзд тоже', () => {
+    const ratings = [{ id: 2571, rating: 5 }, { id: 318, rating: 4.5 }, { id: 1, rating: 0.5 }]
+    expect(encodeRatings(ratings)).toBe('2571-10.318-9.1-1')
+    expect(decodeRatings(encodeRatings(ratings))).toEqual(ratings)
+  })
+
+  it('мусор в адресе пропускается, у повтора – последняя оценка', () => {
+    expect(decodeRatings('2571-10.abc.318-11.0-5.7-0.2571-6.47-8')).toEqual([{ id: 2571, rating: 3 }, { id: 47, rating: 4 }])
+    expect(decodeRatings('')).toEqual([])
+  })
+
+  it('адрес – главная страница сайта с параметром r', () => {
+    expect(shareUrl('https://alextrav.github.io/KinoCompass', [{ id: 1, rating: 4 }])).toBe('https://alextrav.github.io/KinoCompass/?r=1-8')
+    expect(shareUrl('http://localhost:8080/', [{ id: 1, rating: 4 }])).toBe('http://localhost:8080/?r=1-8')
+  })
+})
 
 describe('объяснение советов', () => {
   const b = (id: number, share: number) => ({ id, title: `Фильм ${id}`, share })

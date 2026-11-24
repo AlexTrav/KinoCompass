@@ -1,21 +1,77 @@
 <script setup lang="ts">
 import { refDebounced } from '@vueuse/core'
-import { Search, Sparkles, Trash2, X } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { Drama, Ghost, Rocket, Search, Share2, Smile, Sparkles, Trash2, Undo2, X } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api } from '../api/client'
+import { useRoute, useRouter } from 'vue-router'
+import { api, ratedCards } from '../api/client'
 import CompassRose from '../components/CompassRose.vue'
 import FilmCard from '../components/FilmCard.vue'
 import HintTip from '../components/HintTip.vue'
 import RecsInsight from '../components/RecsInsight.vue'
+import ShareDialog from '../components/ShareDialog.vue'
 import WhyDialog from '../components/WhyDialog.vue'
 import { ENOUGH, useRatings } from '../composables/useRatings'
 import type { AppLocale, Because, Film } from '../types'
 import { posterUrl } from '../utils/format'
+import { type Persona, type PersonaKey, PERSONAS, personaRatings } from '../utils/personas'
+import { decodeRatings, SHARE_PARAM } from '../utils/share'
 
 const { t, locale } = useI18n()
 const lang = computed(() => locale.value as AppLocale)
-const { ratings, payload, remove, clear } = useRatings()
+const { ratings, payload, backup, remove, clear, replace, restore } = useRatings()
+
+// ---------- готовые вкусы и оценки из ссылки «Поделиться»: заменяют оценки, свои можно вернуть ----------
+const PERSONA_ICON = { scifi: Rocket, animation: Smile, classic: Drama, horror: Ghost } as const
+const applied = ref<PersonaKey | 'link' | null>(null)
+const linkState = ref<'idle' | 'loading' | 'failed'>('idle')
+const shareOpen = ref(false)
+const appliedText = computed(() =>
+  applied.value === 'link'
+    ? t('persona.appliedLink')
+    : applied.value
+      ? t('persona.applied', { name: t(`persona.${applied.value}`) })
+      : '',
+)
+
+// после выбора – к советам: их пересчёт виден сразу
+async function showRecs() {
+  await nextTick()
+  document.getElementById('recs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function applyPersona(persona: Persona) {
+  replace(personaRatings(persona, lang.value))
+  applied.value = persona.key
+  showRecs()
+}
+
+function restoreOwn() {
+  restore()
+  applied.value = null
+}
+
+// ссылка вида /?r=2571-10.318-9: оценки грузятся один раз, параметр убирается из адреса – перезагрузка страницы
+// не заменит оценки повторно
+const route = useRoute()
+const router = useRouter()
+onMounted(async () => {
+  const raw = route.query[SHARE_PARAM]
+  if (typeof raw !== 'string' || !raw) return
+  const scores = decodeRatings(raw)
+  router.replace({ query: {} })
+  if (!scores.length) return
+  linkState.value = 'loading'
+  const cards = await ratedCards(scores, lang.value)
+  if (!cards.length) {
+    linkState.value = 'failed'
+    return
+  }
+  replace(cards)
+  applied.value = 'link'
+  linkState.value = 'idle'
+  showRecs()
+})
 
 // ---------- «Показать ещё»: страница за страницей (offset), пока фильмы в списке не кончатся ----------
 // популярное – весь каталог, поиск по названию – все совпадения, новинки – все 443, советы – весь каталог
@@ -158,6 +214,31 @@ const progress = computed(() => Math.min(1, ratings.value.length / ENOUGH))
             <div class="h-full rounded-full bg-accent transition-all duration-500" :style="{ width: `${progress * 100}%` }" />
           </div>
         </div>
+        <!-- готовые вкусы: советы в один клик -->
+        <div class="max-w-xl space-y-2">
+          <p class="text-sm text-muted">{{ t('persona.lead') }}</p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="p in PERSONAS"
+              :key="p.key"
+              type="button"
+              class="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition"
+              :class="applied === p.key ? 'border-accent bg-accent-soft' : 'border-line bg-surface hover:border-accent hover:text-accent'"
+              :aria-pressed="applied === p.key"
+              @click="applyPersona(p)"
+            >
+              <component :is="PERSONA_ICON[p.key]" class="h-4 w-4 text-accent" /> {{ t(`persona.${p.key}`) }}
+            </button>
+          </div>
+          <p v-if="linkState === 'loading'" class="text-sm text-muted">{{ t('persona.loadingLink') }}</p>
+          <p v-else-if="linkState === 'failed'" class="text-sm text-muted">{{ t('persona.linkFailed') }}</p>
+          <p v-if="applied" class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span class="text-muted">{{ appliedText }}</span>
+            <button v-if="backup" type="button" class="flex items-center gap-1 text-accent hover:underline" @click="restoreOwn">
+              <Undo2 class="h-4 w-4" /> {{ t('persona.restore') }}
+            </button>
+          </p>
+        </div>
       </div>
       <CompassRose :ratings="ratings" />
     </section>
@@ -166,9 +247,14 @@ const progress = computed(() => Math.min(1, ratings.value.length / ENOUGH))
     <section v-if="ratings.length" class="space-y-3">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold">{{ t('rate.yours') }}</h2>
-        <button type="button" class="flex items-center gap-1 text-sm text-muted hover:text-ink" @click="clear">
-          <Trash2 class="h-4 w-4" /> {{ t('rate.clear') }}
-        </button>
+        <div class="flex items-center gap-4">
+          <button type="button" class="flex items-center gap-1 text-sm text-accent hover:underline" @click="shareOpen = true">
+            <Share2 class="h-4 w-4" /> {{ t('share.button') }}
+          </button>
+          <button type="button" class="flex items-center gap-1 text-sm text-muted hover:text-ink" @click="clear">
+            <Trash2 class="h-4 w-4" /> {{ t('rate.clear') }}
+          </button>
+        </div>
       </div>
       <ul class="flex flex-wrap gap-2">
         <li v-for="r in ratings" :key="r.id" class="flex items-center gap-2 rounded-full border border-line bg-surface py-1 pl-1 pr-2 text-sm">
@@ -183,7 +269,7 @@ const progress = computed(() => Math.min(1, ratings.value.length / ENOUGH))
     </section>
 
     <!-- советы -->
-    <section class="space-y-5">
+    <section id="recs" class="scroll-mt-24 space-y-5">
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 class="flex items-center gap-2 text-2xl font-semibold">
@@ -283,5 +369,6 @@ const progress = computed(() => Math.min(1, ratings.value.length / ENOUGH))
     </section>
 
     <WhyDialog :film="why?.film ?? null" :kind="why?.kind ?? 'taste'" :weight="recWeight" @close="why = null" />
+    <ShareDialog :open="shareOpen" @close="shareOpen = false" />
   </div>
 </template>

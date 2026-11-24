@@ -1,4 +1,4 @@
-import type { AppLocale, Compare, FilmDetail, Health, Items, MapFilm, MapMe, NewItems, Perf, Recommend } from '../types'
+import type { AppLocale, Compare, FilmDetail, Health, Items, MapFilm, MapMe, NewItems, Perf, Rated, Recommend } from '../types'
 
 // адрес API: в сборке – аргумент Docker (по умолчанию API на Render)
 export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://kinocompass-backend.onrender.com'
@@ -75,9 +75,31 @@ export const api = {
     request<Recommend>('/api/recommend', { ratings, lang, popularity_weight: popularityWeight, k, offset }, signal),
   newItems: (ratings: Ratings, lang: AppLocale, signal?: AbortSignal, k = 12, offset = 0) =>
     request<NewItems>('/api/new', { ratings, lang, k, offset }, signal),
-  film: (id: number, lang: AppLocale) => request<FilmDetail>(`/api/film/${id}?${q({ lang, k: 12 })}`),
+  // k – сколько похожих фильмов: для карточек оценок из ссылки «Поделиться» хватает одного
+  film: (id: number, lang: AppLocale, k = 12) => request<FilmDetail>(`/api/film/${id}?${q({ lang, k })}`),
   compare: (ratings: Ratings, lang: AppLocale) => request<Compare>('/api/compare', { ratings, lang, k: 10 }),
   map: (lang: AppLocale) => request<{ films: MapFilm[] }>(`/api/map?${q({ lang })}`),
   mapMe: (ratings: Ratings) => request<MapMe>('/api/map/me', { ratings }),
   perf: () => request<Perf>('/api/perf'),
+}
+
+/** Оценки из ссылки «Поделиться» с названием, постером и жанрами – как поставленные вручную. Карточки грузятся
+ * по 4 одновременно (столько расчётов держит сервер); фильмы, которых нет в каталоге, пропускаются. */
+export async function ratedCards(scores: Ratings, lang: AppLocale): Promise<Rated[]> {
+  const out: (Rated | null)[] = scores.map(() => null)
+  let next = 0
+  async function worker() {
+    while (next < scores.length) {
+      const i = next++
+      const { id, rating } = scores[i]
+      try {
+        const f = await api.film(id, lang, 1)
+        out[i] = { id, rating, title: f.title, poster: f.poster, genres: f.genres, year: f.year }
+      } catch {
+        // фильма нет в каталоге или сеть – без него
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(4, scores.length) }, worker))
+  return out.filter((r): r is Rated => r !== null)
 }

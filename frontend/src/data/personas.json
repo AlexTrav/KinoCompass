@@ -1,0 +1,474 @@
+[
+ {
+  "key": "scifi",
+  "films": [
+   {
+    "id": 2571,
+    "rating": 5,
+    "titles": {
+     "ru": "Матрица",
+     "kk": "Матрица",
+     "en": "The Matrix"
+    },
+    "poster": "/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg",
+    "genres": [
+     "Action",
+     "Sci-Fi",
+     "Thriller"
+    ],
+    "year": 1999
+   },
+   {
+    "id": 109487,
+    "rating": 5,
+    "titles": {
+     "ru": "Интерстеллар",
+     "kk": "Интерстеллар",
+     "en": "Interstellar"
+    },
+    "poster": "/yQvGrMoipbRoddT0ZR8tPoR7NfX.jpg",
+    "genres": [
+     "Sci-Fi",
+     "IMAX"
+    ],
+    "year": 2014
+   },
+   {
+    "id": 260,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Звёздные войны. Эпизод IV: Новая надежда",
+     "kk": "Жұлдызды соғыстар: Эпизод IV - Жаңа үміт",
+     "en": "Star Wars: Episode IV – A New Hope"
+    },
+    "poster": "/fai0rspsNeJCS69wHNjOdWxcI7P.jpg",
+    "genres": [
+     "Action",
+     "Adventure",
+     "Sci-Fi"
+    ],
+    "year": 1977
+   },
+   {
+    "id": 79132,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Начало",
+     "kk": "Бастау",
+     "en": "Inception"
+    },
+    "poster": "/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+    "genres": [
+     "Action",
+     "Crime",
+     "Drama",
+     "Mystery",
+     "Sci-Fi",
+     "Thriller",
+     "IMAX"
+    ],
+    "year": 2010
+   },
+   {
+    "id": 589,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Терминатор 2: Судный день",
+     "kk": "Терминатор 2: Ғарасат күні",
+     "en": "Terminator 2: Judgment Day"
+    },
+    "poster": "/jFTVD4XoWQTcg7wdyJKa8PEds5q.jpg",
+    "genres": [
+     "Action",
+     "Sci-Fi"
+    ],
+    "year": 1991
+   },
+   {
+    "id": 541,
+    "rating": 4,
+    "titles": {
+     "ru": "Бегущий по лезвию",
+     "kk": "Ұстараның жүзімен жүгіруші",
+     "en": "Blade Runner"
+    },
+    "poster": "/63N9uy8nd9j7Eog2axPQ8lbr3Wj.jpg",
+    "genres": [
+     "Action",
+     "Sci-Fi",
+     "Thriller"
+    ],
+    "year": 1982
+   },
+   {
+    "id": 1214,
+    "rating": 4,
+    "titles": {
+     "ru": "Чужой",
+     "kk": "Чужой",
+     "en": "Alien"
+    },
+    "poster": "/vfrQk5IPloGg1v9Rzbh2Eg3VGyM.jpg",
+    "genres": [
+     "Horror",
+     "Sci-Fi"
+    ],
+    "year": 1979
+   }
+  ]
+ },
+ {
+  "key": "animation",
+  "films": [
+   {
+    "id": 1,
+    "rating": 5,
+    "titles": {
+     "ru": "История игрушек",
+     "kk": "Ойыншықтар хикаясы",
+     "en": "Toy Story"
+    },
+    "poster": "/uXDfjJbdP4ijW5hWSBrPrlKpxab.jpg",
+    "genres": [
+     "Adventure",
+     "Animation",
+     "Children",
+     "Comedy",
+     "Fantasy"
+    ],
+    "year": 1995
+   },
+   {
+    "id": 5618,
+    "rating": 5,
+    "titles": {
+     "ru": "Унесённые призраками",
+     "kk": "Унесённые призраками",
+     "en": "Spirited Away"
+    },
+    "poster": "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
+    "genres": [
+     "Adventure",
+     "Animation",
+     "Fantasy"
+    ],
+    "year": 2001
+   },
+   {
+    "id": 68954,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Вверх",
+     "kk": "Вверх",
+     "en": "Up"
+    },
+    "poster": "/mFvoEwSfLqbcWwFsDjQebn9bzFe.jpg",
+    "genres": [
+     "Adventure",
+     "Animation",
+     "Children",
+     "Drama"
+    ],
+    "year": 2009
+   },
+   {
+    "id": 364,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Король Лев",
+     "kk": "Арыстан Патша",
+     "en": "The Lion King"
+    },
+    "poster": "/sKCr78MXSLixwmZ8DyJLrpMsd15.jpg",
+    "genres": [
+     "Adventure",
+     "Animation",
+     "Children",
+     "Drama",
+     "Musical",
+     "IMAX"
+    ],
+    "year": 1994
+   },
+   {
+    "id": 60069,
+    "rating": 4.5,
+    "titles": {
+     "ru": "ВАЛЛ•И",
+     "kk": "ВАЛЛ•И",
+     "en": "WALL-E"
+    },
+    "poster": "/hbhFnRzzg6ZDmm8YAmxBnQpQIPh.jpg",
+    "genres": [
+     "Adventure",
+     "Animation",
+     "Children",
+     "Romance",
+     "Sci-Fi"
+    ],
+    "year": 2008
+   },
+   {
+    "id": 134853,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Головоломка",
+     "kk": "Головоломка",
+     "en": "Inside Out"
+    },
+    "poster": "/2H1TmgdfNtsKlU9jKdeNyYL5y8T.jpg",
+    "genres": [
+     "Adventure",
+     "Animation",
+     "Children",
+     "Comedy",
+     "Drama",
+     "Fantasy"
+    ],
+    "year": 2015
+   },
+   {
+    "id": 4306,
+    "rating": 4,
+    "titles": {
+     "ru": "Шрек",
+     "kk": "Шрек",
+     "en": "Shrek"
+    },
+    "poster": "/iB64vpL3dIObOtMZgX3RqdVdQDc.jpg",
+    "genres": [
+     "Adventure",
+     "Animation",
+     "Children",
+     "Comedy",
+     "Fantasy",
+     "Romance"
+    ],
+    "year": 2001
+   }
+  ]
+ },
+ {
+  "key": "classic",
+  "films": [
+   {
+    "id": 858,
+    "rating": 5,
+    "titles": {
+     "ru": "Крёстный отец",
+     "kk": "Өкіл әке",
+     "en": "The Godfather"
+    },
+    "poster": "/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
+    "genres": [
+     "Crime",
+     "Drama"
+    ],
+    "year": 1972
+   },
+   {
+    "id": 318,
+    "rating": 5,
+    "titles": {
+     "ru": "Побег из Шоушенка",
+     "kk": "Шоушенктен қашу",
+     "en": "The Shawshank Redemption"
+    },
+    "poster": "/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",
+    "genres": [
+     "Crime",
+     "Drama"
+    ],
+    "year": 1994
+   },
+   {
+    "id": 1203,
+    "rating": 4.5,
+    "titles": {
+     "ru": "12 разгневанных мужчин",
+     "kk": "12 ашулы кісі",
+     "en": "12 Angry Men"
+    },
+    "poster": "/zhG3vKWyDRaZYoaww1UVAi29T9h.jpg",
+    "genres": [
+     "Drama"
+    ],
+    "year": 1957
+   },
+   {
+    "id": 912,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Касабланка",
+     "kk": "Касабланка",
+     "en": "Casablanca"
+    },
+    "poster": "/lGCEKlJo2CnWydQj7aamY7s1S7Q.jpg",
+    "genres": [
+     "Drama",
+     "Romance"
+    ],
+    "year": 1942
+   },
+   {
+    "id": 527,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Список Шиндлера",
+     "kk": "Шиндлердің тізімі",
+     "en": "Schindler's List"
+    },
+    "poster": "/sF1U4EUQS8YHUYjNl3pMGNIQyr0.jpg",
+    "genres": [
+     "Drama",
+     "War"
+    ],
+    "year": 1993
+   },
+   {
+    "id": 1193,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Пролетая над гнездом кукушки",
+     "kk": "Көкектің ұясы",
+     "en": "One Flew Over the Cuckoo's Nest"
+    },
+    "poster": "/kjWsMh72V6d8KRLV4EOoSJLT1H7.jpg",
+    "genres": [
+     "Drama"
+    ],
+    "year": 1975
+   },
+   {
+    "id": 356,
+    "rating": 4,
+    "titles": {
+     "ru": "Форрест Гамп",
+     "kk": "Форрест Гамп",
+     "en": "Forrest Gump"
+    },
+    "poster": "/saHP97rTPS5eLmrLQEcANmKrsFl.jpg",
+    "genres": [
+     "Comedy",
+     "Drama",
+     "Romance",
+     "War"
+    ],
+    "year": 1994
+   }
+  ]
+ },
+ {
+  "key": "horror",
+  "films": [
+   {
+    "id": 1258,
+    "rating": 5,
+    "titles": {
+     "ru": "Сияние",
+     "kk": "Сияние",
+     "en": "The Shining"
+    },
+    "poster": "/uAR0AWqhQL1hQa69UDEbb2rE5Wx.jpg",
+    "genres": [
+     "Horror"
+    ],
+    "year": 1980
+   },
+   {
+    "id": 593,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Молчание ягнят",
+     "kk": "Қозылар үнсіздігі",
+     "en": "The Silence of the Lambs"
+    },
+    "poster": "/uS9m8OBk1A8eM9I042bx8XXpqAq.jpg",
+    "genres": [
+     "Crime",
+     "Horror",
+     "Thriller"
+    ],
+    "year": 1991
+   },
+   {
+    "id": 2288,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Нечто",
+     "kk": "Нечто",
+     "en": "The Thing"
+    },
+    "poster": "/tzGY49kseSE9QAKk47uuDGwnSCu.jpg",
+    "genres": [
+     "Action",
+     "Horror",
+     "Sci-Fi",
+     "Thriller"
+    ],
+    "year": 1982
+   },
+   {
+    "id": 1219,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Психо",
+     "kk": "Психо",
+     "en": "Psycho"
+    },
+    "poster": "/yz4QVqPx3h1hD1DfqqQkCq3rmxW.jpg",
+    "genres": [
+     "Crime",
+     "Horror"
+    ],
+    "year": 1960
+   },
+   {
+    "id": 47,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Семь",
+     "kk": "Жеті",
+     "en": "Seven"
+    },
+    "poster": "/191nKfP0ehp3uIvWqgPbFmI4lv9.jpg",
+    "genres": [
+     "Mystery",
+     "Thriller"
+    ],
+    "year": 1995
+   },
+   {
+    "id": 1214,
+    "rating": 4.5,
+    "titles": {
+     "ru": "Чужой",
+     "kk": "Чужой",
+     "en": "Alien"
+    },
+    "poster": "/vfrQk5IPloGg1v9Rzbh2Eg3VGyM.jpg",
+    "genres": [
+     "Horror",
+     "Sci-Fi"
+    ],
+    "year": 1979
+   },
+   {
+    "id": 8957,
+    "rating": 4,
+    "titles": {
+     "ru": "Пила: Игра на выживание",
+     "kk": "Пила: Игра на выживание",
+     "en": "Saw"
+    },
+    "poster": "/rLNSOudrayDBo1uqXjrhxcjODIC.jpg",
+    "genres": [
+     "Horror",
+     "Mystery",
+     "Thriller"
+    ],
+    "year": 2004
+   }
+  ]
+ }
+]
