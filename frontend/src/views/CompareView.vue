@@ -9,10 +9,13 @@ import HintTip from '../components/HintTip.vue'
 import { useRatings } from '../composables/useRatings'
 import site from '../data/site.json'
 import type { AppLocale, Compare, ModelKey } from '../types'
-import { formatNumber, posterUrl } from '../utils/format'
+import { formatNumber, formatPercent, posterUrl } from '../utils/format'
 
 const METRIC = 'NDCG@10'
 const SCENARIOS = ['cold5', 'cold10', 'warm'] as const
+// таблица сценариев: не только точность – попадание, новизна и покрытие из тех же отчётов (site.json)
+const METRICS = ['ndcg', 'hit', 'novelty', 'coverage'] as const
+type Metric = (typeof METRICS)[number]
 const LIVE: ModelKey[] = ['popular', 'als', 'content', 'hybrid']
 
 const { t, locale } = useI18n()
@@ -77,9 +80,21 @@ const chart = computed(() => {
   }
 })
 
+const metric = ref<Metric>('ndcg')
+type Model = (typeof site.models)[number]
+const value = (m: Model, s: (typeof SCENARIOS)[number]) =>
+  (m.scenarios[s] as unknown as Record<Metric, number | null>)[metric.value]
+// точность – как в отчётах (3 знака), попадание – проценты, новизна – биты, покрытие – проценты с сотыми у малых
+function show(x: number | null): string {
+  if (x === null) return '–'
+  if (metric.value === 'ndcg') return fmt(x)
+  if (metric.value === 'novelty') return fmt(x, 1)
+  if (metric.value === 'hit') return formatPercent(x, lang.value)
+  return formatPercent(x, lang.value, x < 0.01 ? 2 : 1)
+}
 const best = computed(() => {
   const out: Record<string, number> = {}
-  for (const s of SCENARIOS) out[s] = Math.max(...site.models.map((m) => m.scenarios[s].ndcg ?? 0))
+  for (const s of SCENARIOS) out[s] = Math.max(...site.models.map((m) => value(m, s) ?? 0))
   return out
 })
 </script>
@@ -143,8 +158,23 @@ const best = computed(() => {
 
     <section class="space-y-3">
       <h2 class="flex items-center gap-2 text-xl font-semibold">
-        {{ t('compare.scenarios', { metric: METRIC }) }} <HintTip :text="`${t('hint.scenarios')} ${t('hint.ci')}`" />
+        {{ t('compare.scenarios') }} <HintTip :text="`${t('hint.scenarios')} ${t('hint.ci')}`" />
       </h2>
+      <div class="flex w-fit max-w-full flex-wrap rounded-xl border border-line p-1 text-sm" role="tablist">
+        <button
+          v-for="k in METRICS"
+          :key="k"
+          type="button"
+          role="tab"
+          :aria-selected="metric === k"
+          class="rounded-lg px-3 py-1.5 transition"
+          :class="metric === k ? 'bg-accent text-accent-ink' : 'text-muted hover:text-ink'"
+          @click="metric = k"
+        >
+          {{ t(`compare.m.${k}`, { metric: k === 'hit' ? 'Hit@10' : METRIC }) }}
+        </button>
+      </div>
+      <p class="max-w-3xl text-sm text-muted">{{ t(`compare.mText.${metric}`) }}</p>
       <div class="overflow-x-auto rounded-2xl border border-line">
         <table class="tabular w-full min-w-[640px] text-sm">
           <thead class="bg-surface-2 text-left text-muted">
@@ -163,13 +193,14 @@ const best = computed(() => {
                 <span v-if="m.key === site.site_model" class="ml-1 text-xs text-accent">{{ t('compare.siteModel') }}</span>
               </td>
               <td v-for="s in SCENARIOS" :key="s" class="px-4 py-2">
-                <span :class="{ 'font-semibold text-accent': m.scenarios[s].ndcg === best[s] }">{{ fmt(m.scenarios[s].ndcg) }}</span>
-                <span v-if="m.scenarios[s].ci.length" class="ml-1 text-xs text-muted">{{ fmt(m.scenarios[s].ci[0]) }}–{{ fmt(m.scenarios[s].ci[1]) }}</span>
+                <span :class="{ 'font-semibold text-accent': value(m, s) === best[s] }">{{ show(value(m, s)) }}</span>
+                <span v-if="metric === 'ndcg' && m.scenarios[s].ci.length" class="ml-1 text-xs text-muted">{{ fmt(m.scenarios[s].ci[0]) }}–{{ fmt(m.scenarios[s].ci[1]) }}</span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+      <p class="text-xs text-muted">{{ t('compare.maxNote') }}</p>
     </section>
 
     <section class="space-y-2 rounded-2xl border border-line bg-surface p-5">

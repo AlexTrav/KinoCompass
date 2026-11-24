@@ -12,8 +12,9 @@ export function formatNumber(value: number, locale: AppLocale, digits = 0): stri
   return new Intl.NumberFormat(TAGS[locale], { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value)
 }
 
-export function formatPercent(share: number, locale: AppLocale): string {
-  return new Intl.NumberFormat(TAGS[locale], { style: 'percent', maximumFractionDigits: 0 }).format(share)
+// digits – знаков после запятой: покрытию каталога популярной модели (0,07 %) нужны сотые
+export function formatPercent(share: number, locale: AppLocale, digits = 0): string {
+  return new Intl.NumberFormat(TAGS[locale], { style: 'percent', maximumFractionDigits: digits }).format(share)
 }
 
 // вид слова по числу (1 оценка, 2 оценки, 5 оценок) – Intl.PluralRules знает правила всех трёх языков
