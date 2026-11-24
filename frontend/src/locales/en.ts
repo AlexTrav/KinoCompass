@@ -180,6 +180,8 @@ export default {
     hint: 'Mouse wheel or pinch to zoom, click a point to open the film.',
     method: 't-SNE over ALS vectors: 87 % of the 10 nearest neighbours on the map share a genre, versus 48 % of random pairs.',
     rateFirst: 'Rate films to see yourself on the map.',
+    recs: 'Recommended for you',
+    recsNote: 'Diamonds are your recommendations (the site model, as on the Pick page): {n} of {total} are on the map – it shows the 5000 most rated films. They usually sit next to your films: for the ready-made tastes 50–71 % of recommendations are right next to a rated film, versus 7–12 % of random films.',
   },
   research: {
     title: 'Data research',

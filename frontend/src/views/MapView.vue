@@ -8,8 +8,11 @@ import { api } from '../api/client'
 import { baseOptions, DIRECTION_ORDER, useChartColors } from '../charts'
 import HintTip from '../components/HintTip.vue'
 import { useRatings } from '../composables/useRatings'
-import type { AppLocale, MapFilm, MapMe } from '../types'
+import type { AppLocale, Film, MapFilm, MapMe } from '../types'
 import { mainDirection } from '../utils/compass'
+
+const RECS = 24 // советов на карту: часть из них может быть вне 5000 самых оценённых фильмов
+const SITE_WEIGHT = 0.4 // вес популярности модели сайта – как на тесте (ползунок «Новизна» посередине)
 
 const { t, locale } = useI18n()
 const lang = computed(() => locale.value as AppLocale)
@@ -34,8 +37,23 @@ async function load() {
 async function loadMe() {
   me.value = payload.value.length ? await api.mapMe(payload.value).catch(() => null) : null
 }
+// советы модели сайта на тех же оценках – видно, из каких областей карты они пришли
+const recs = ref<Film[]>([])
+async function loadRecs() {
+  recs.value = payload.value.length
+    ? await api.recommend(payload.value, lang.value, SITE_WEIGHT, undefined, RECS).then((r) => r.items).catch(() => [])
+    : []
+}
 watch(lang, load, { immediate: true })
 watch(() => JSON.stringify(payload.value), loadMe, { immediate: true })
+watch([() => JSON.stringify(payload.value), lang], loadRecs, { immediate: true })
+const place = computed(() => new Map(films.value.map((f) => [f.id, f])))
+const recsOnMap = computed(() =>
+  recs.value.flatMap((r) => {
+    const f = place.value.get(r.id)
+    return f ? [[f.x, f.y, f.id, f.title]] : []
+  }),
+)
 
 // группа точки – самая характерная (редкая) сторона компаса среди жанров фильма; без стороны – «Другое»
 const groups = computed(() => {
@@ -70,6 +88,16 @@ const option = computed(() => {
     symbolSize: 13,
     z: 5,
     itemStyle: { color: c.text, borderColor: c.accent, borderWidth: 3 },
+  })
+  // советы – янтарные ромбы с обводкой цветом фона: форма отличает их и от групп, и от ваших фильмов
+  series.push({
+    name: t('map.recs'),
+    type: 'scatter',
+    data: recsOnMap.value,
+    symbol: 'diamond',
+    symbolSize: 14,
+    z: 4,
+    itemStyle: { color: c.accent, borderColor: c.surface, borderWidth: 2 },
   })
   if (me.value?.x !== null && me.value?.x !== undefined) {
     series.push({
@@ -125,6 +153,7 @@ function open(params: { data?: unknown }) {
       <p v-else-if="state === 'error'" class="absolute inset-0 flex items-center justify-center text-muted">{{ t('rec.error') }}</p>
       <VChart v-if="state === 'ok'" :option="option" autoresize @click="open" />
     </div>
+    <p v-if="recs.length" class="text-sm text-muted">{{ t('map.recsNote', { n: recsOnMap.length, total: recs.length }) }}</p>
     <p class="text-xs text-muted">{{ t('map.hint') }} {{ t('map.method') }}</p>
   </div>
 </template>
